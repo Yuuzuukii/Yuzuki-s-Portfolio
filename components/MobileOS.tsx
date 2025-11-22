@@ -21,15 +21,13 @@ export const MobileOS: React.FC<MobileOSProps> = ({ apps, appComponents, onLogou
     const handleResize = () => setIsLandscape(window.innerWidth > window.innerHeight);
     window.addEventListener('resize', handleResize);
     
-    // 壁紙をプリロード
-    const img = new Image();
-    img.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1964&auto=format&fit=crop';
-    img.onload = () => setImageLoaded(true);
+    // 即座にローディングを完了してUIを表示
+    setImageLoaded(true);
     
-    // 初回起動時にAboutアプリを自動表示（オプション）
-    const timer2 = setTimeout(() => {
+    // 少し待ってから初期アプリを表示
+    setTimeout(() => {
       setShowInitialApp(true);
-      // 3秒後にAboutアプリを開く（初回のみ）
+      // 初回のみAboutアプリを自動表示
       const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
       if (!hasSeenWelcome) {
         setTimeout(() => {
@@ -38,14 +36,13 @@ export const MobileOS: React.FC<MobileOSProps> = ({ apps, appComponents, onLogou
             setActiveAppId('about');
             sessionStorage.setItem('hasSeenWelcome', 'true');
           }
-        }, 1500);
+        }, 800);
       }
     }, 500);
     
     return () => {
         clearInterval(timer);
         window.removeEventListener('resize', handleResize);
-        clearTimeout(timer2);
     };
   }, [apps]);
 
@@ -75,23 +72,35 @@ export const MobileOS: React.FC<MobileOSProps> = ({ apps, appComponents, onLogou
     <div className="h-full w-full bg-black relative overflow-hidden font-sans select-none text-white">
       {/* ローディング表示 */}
       {!imageLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black z-50">
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-400 z-50">
           <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
-            <p className="text-white/60 text-sm">Loading...</p>
+            <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+            <p className="text-white text-lg font-medium">YuzuOS</p>
+            <p className="text-white/80 text-sm">Loading your experience...</p>
           </div>
         </div>
       )}
       
-      {/* Wallpaper */}
+      {/* 美しいグラデーション壁紙 */}
       <div 
-        className="absolute inset-0 bg-cover bg-center transition-transform duration-500"
+        className="absolute inset-0 transition-transform duration-500"
         style={{ 
-            backgroundImage: "url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1964&auto=format&fit=crop'), linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%)",
+            backgroundSize: "400% 400%",
+            animation: activeAppId ? "none" : "gradient 15s ease infinite",
             transform: activeAppId ? 'scale(1.1)' : 'scale(1)',
             filter: activeAppId ? 'brightness(0.8)' : 'brightness(1)'
         }}
       />
+      
+      {/* アニメーション用のスタイル */}
+      <style>{`
+        @keyframes gradient {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+      `}</style>
 
       {/* Android Status Bar */}
       <div className={`absolute top-0 w-full h-8 z-50 flex justify-between items-center px-4 text-xs font-medium transition-colors duration-300 ${activeAppId ? 'text-black bg-white/80 backdrop-blur-md' : 'text-white shadow-sm'}`}>
