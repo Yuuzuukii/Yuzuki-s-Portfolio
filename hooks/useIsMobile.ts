@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 
 export const useIsMobile = () => {
-  // Increased breakpoint to 1280px to include most tablets in landscape mode (e.g. iPad Pro 12.9 is 1366px, but iPad Air is 1180px)
-  // This ensures a touch-first experience on tablet devices.
-  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 1280 : false);
+  // ブレークポイントを768pxに変更：スマートフォンのみをモバイル扱いに
+  // タブレット（iPad: 768px以上）はデスクトップUIを使用
+  // モバイル: ~767px (スマートフォン)
+  // デスクトップ: 768px~ (タブレット、ノートPC、デスクトップ)
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 1280);
+      setIsMobile(window.innerWidth < 768);
     };
 
     window.addEventListener('resize', handleResize);

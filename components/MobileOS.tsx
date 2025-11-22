@@ -13,16 +13,41 @@ export const MobileOS: React.FC<MobileOSProps> = ({ apps, appComponents, onLogou
   const [time, setTime] = useState(new Date());
   const [isClosing, setIsClosing] = useState(false);
   const [isLandscape, setIsLandscape] = useState(window.innerWidth > window.innerHeight);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [showInitialApp, setShowInitialApp] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     const handleResize = () => setIsLandscape(window.innerWidth > window.innerHeight);
     window.addEventListener('resize', handleResize);
+    
+    // 壁紙をプリロード
+    const img = new Image();
+    img.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1964&auto=format&fit=crop';
+    img.onload = () => setImageLoaded(true);
+    
+    // 初回起動時にAboutアプリを自動表示（オプション）
+    const timer2 = setTimeout(() => {
+      setShowInitialApp(true);
+      // 3秒後にAboutアプリを開く（初回のみ）
+      const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
+      if (!hasSeenWelcome) {
+        setTimeout(() => {
+          const aboutApp = apps.find(app => app.id === 'about');
+          if (aboutApp) {
+            setActiveAppId('about');
+            sessionStorage.setItem('hasSeenWelcome', 'true');
+          }
+        }, 1500);
+      }
+    }, 500);
+    
     return () => {
         clearInterval(timer);
         window.removeEventListener('resize', handleResize);
+        clearTimeout(timer2);
     };
-  }, []);
+  }, [apps]);
 
   const handleAppClick = (id: string) => {
     setActiveAppId(id);
@@ -48,11 +73,21 @@ export const MobileOS: React.FC<MobileOSProps> = ({ apps, appComponents, onLogou
 
   return (
     <div className="h-full w-full bg-black relative overflow-hidden font-sans select-none text-white">
+      {/* ローディング表示 */}
+      {!imageLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black z-50">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+            <p className="text-white/60 text-sm">Loading...</p>
+          </div>
+        </div>
+      )}
+      
       {/* Wallpaper */}
       <div 
         className="absolute inset-0 bg-cover bg-center transition-transform duration-500"
         style={{ 
-            backgroundImage: "url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1964&auto=format&fit=crop')",
+            backgroundImage: "url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1964&auto=format&fit=crop'), linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
             transform: activeAppId ? 'scale(1.1)' : 'scale(1)',
             filter: activeAppId ? 'brightness(0.8)' : 'brightness(1)'
         }}
