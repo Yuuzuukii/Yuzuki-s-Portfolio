@@ -61,6 +61,13 @@ function App() {
       setActiveWindowId(null);
   };
 
+  // Mobile users skip boot and login screens
+  useEffect(() => {
+    if (isMobile && systemState !== SystemState.DESKTOP) {
+      setSystemState(SystemState.DESKTOP);
+    }
+  }, [isMobile, systemState]);
+
   // Window Management Logic
   const openApp = (appId: string) => {
     const existingWindow = windows.find(w => w.id === appId);
