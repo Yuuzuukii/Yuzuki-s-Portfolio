@@ -13,32 +13,23 @@ export const MobileOS: React.FC<MobileOSProps> = ({ apps, appComponents, onLogou
   const [time, setTime] = useState(new Date());
   const [isClosing, setIsClosing] = useState(false);
   const [isLandscape, setIsLandscape] = useState(window.innerWidth > window.innerHeight);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [showInitialApp, setShowInitialApp] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     const handleResize = () => setIsLandscape(window.innerWidth > window.innerHeight);
     window.addEventListener('resize', handleResize);
     
-    // 即座にローディングを完了してUIを表示
-    setImageLoaded(true);
-    
-    // 少し待ってから初期アプリを表示
-    setTimeout(() => {
-      setShowInitialApp(true);
-      // 初回のみAboutアプリを自動表示
-      const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
-      if (!hasSeenWelcome) {
-        setTimeout(() => {
-          const aboutApp = apps.find(app => app.id === 'about');
-          if (aboutApp) {
-            setActiveAppId('about');
-            sessionStorage.setItem('hasSeenWelcome', 'true');
-          }
-        }, 800);
-      }
-    }, 500);
+    // 初回のみAboutアプリを自動表示
+    const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
+    if (!hasSeenWelcome) {
+      setTimeout(() => {
+        const aboutApp = apps.find(app => app.id === 'about');
+        if (aboutApp) {
+          setActiveAppId('about');
+          sessionStorage.setItem('hasSeenWelcome', 'true');
+        }
+      }, 1000);
+    }
     
     return () => {
         clearInterval(timer);
@@ -70,17 +61,6 @@ export const MobileOS: React.FC<MobileOSProps> = ({ apps, appComponents, onLogou
 
   return (
     <div className="h-full w-full bg-black relative overflow-hidden font-sans select-none text-white">
-      {/* ローディング表示 */}
-      {!imageLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-400 z-50">
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
-            <p className="text-white text-lg font-medium">YuzuOS</p>
-            <p className="text-white/80 text-sm">Loading your experience...</p>
-          </div>
-        </div>
-      )}
-      
       {/* 美しいグラデーション壁紙 */}
       <div 
         className="absolute inset-0 transition-transform duration-500"
