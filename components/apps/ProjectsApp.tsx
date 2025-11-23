@@ -4,36 +4,31 @@ import { ExternalLink, Github, Folder } from 'lucide-react';
 const projects = [
   {
     id: 1,
-    title: "YuzuOS",
-    category: "Frontend / React",
-    description: "A Windows-like operating system running in the browser. You're using it right now! Features a custom window manager, taskbar, and file system simulation.",
+    title: "ShigaChat",
+    category: "Web Application / AI",
+    description: "滋賀県在住の外国人向け多言語対応Q&Aサービス。ChatGPTとRAG（検索拡張生成）を組み合わせることで、地域特化の情報を迅速かつ正確に提供します。日本語、英語、ベトナム語、中国語、韓国語に対応。",
     image: "https://picsum.photos/600/400?random=1",
-    tags: ["React", "TypeScript", "Tailwind", "Vite"],
+    tags: ["React", "Python", "FastAPI", "ChatGPT", "RAG", "MySQL"],
+    github: "https://github.com/Yuuzuukii/ShigaChat",
   },
   {
     id: 2,
-    title: "EcoTracker Mobile",
-    category: "Mobile / UX",
-    description: "A cross-platform mobile application helping users track their carbon footprint with gamification elements to encourage sustainable habits.",
+    title: "YuzukiOS Portfolio",
+    category: "Frontend / React",
+    description: "ブラウザ上で動作するWindows風のオペレーティングシステム。カスタムウィンドウマネージャー、タスクバー、各種アプリケーションを実装。このポートフォリオそのものです！",
     image: "https://picsum.photos/600/400?random=2",
-    tags: ["React Native", "Firebase", "Figma"],
+    tags: ["React", "TypeScript", "Tailwind", "Vite"],
+    github: "https://github.com/Yuuzuukii/portfolio",
   },
   {
     id: 3,
-    title: "DataViz Dashboard",
-    category: "Data Science",
-    description: "Interactive dashboard visualizing Tokyo public transport real-time data using D3.js and WebGL for high-performance rendering.",
+    title: "Multi-Agent Dialogue Protocol",
+    category: "Research / AI",
+    description: "大規模言語モデルを用いたマルチエージェント対話プロトコルの研究。異文化コラボレーションを軸に、LLMマルチエージェントを用いて社会的課題を解決する実験的プロジェクト。",
     image: "https://picsum.photos/600/400?random=3",
-    tags: ["D3.js", "WebGL", "Next.js"],
+    tags: ["Python", "LLM", "AI Research", "NLP"],
+    github: null,
   },
-  {
-    id: 4,
-    title: "Gemini Chatbot",
-    category: "AI / API",
-    description: "Integrated Google's Gemini API to create a context-aware chatbot that helps users navigate complex documentation sites.",
-    image: "https://picsum.photos/600/400?random=4",
-    tags: ["Node.js", "Google GenAI SDK", "WebSockets"],
-  }
 ];
 
 export const ProjectsApp: React.FC = () => {
@@ -82,12 +77,21 @@ export const ProjectsApp: React.FC = () => {
               </div>
 
               <div className="flex gap-3 pt-4 border-t border-slate-100">
-                <button className="flex-1 flex items-center justify-center gap-2 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 text-sm font-medium transition-colors">
-                  <Github size={16} /> Source
-                </button>
-                <button className="flex-1 flex items-center justify-center gap-2 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 text-sm font-medium transition-colors">
-                  <ExternalLink size={16} /> Demo
-                </button>
+                {project.github && (
+                  <a 
+                    href={project.github}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center gap-2 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 text-sm font-medium transition-colors"
+                  >
+                    <Github size={16} /> Source
+                  </a>
+                )}
+                {!project.github && (
+                  <div className="flex-1 flex items-center justify-center gap-2 py-2 bg-slate-300 text-slate-500 rounded-lg text-sm font-medium cursor-not-allowed">
+                    <Github size={16} /> Private
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -68,12 +68,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         <div className="flex flex-col items-center gap-4">
             <div className={`rounded-full p-1 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 shadow-2xl transition-all duration-500 ${isMobile ? 'w-24 h-24' : 'w-32 h-32'}`}>
                 <img 
-                    src="https://picsum.photos/200/200" 
-                    alt="Profile" 
+                    src="/Yuzuki-s-Portfolio/profile.jpg" 
+                    alt="Yuzuki Masuo" 
                     className="w-full h-full rounded-full border-4 border-black/50 object-cover"
                 />
             </div>
-            <h1 className="text-3xl font-semibold text-white drop-shadow-lg whitespace-nowrap">Masuo Yuzuki</h1>
+            <h1 className="text-3xl font-semibold text-white drop-shadow-lg whitespace-nowrap">増尾 柚希</h1>
         </div>
         
         {loading ? (

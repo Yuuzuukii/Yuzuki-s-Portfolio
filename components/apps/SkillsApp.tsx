@@ -3,20 +3,19 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
 import { Cpu, Palette, Database } from 'lucide-react';
 
 const radarData = [
-  { subject: 'Frontend', A: 95, fullMark: 100 },
-  { subject: 'Backend', A: 70, fullMark: 100 },
-  { subject: 'UI/UX', A: 85, fullMark: 100 },
-  { subject: 'DevOps', A: 60, fullMark: 100 },
-  { subject: 'Communication', A: 90, fullMark: 100 },
-  { subject: 'English', A: 75, fullMark: 100 },
+  { subject: 'Frontend', A: 90, fullMark: 100 },
+  { subject: 'Backend', A: 85, fullMark: 100 },
+  { subject: 'UI/UX', A: 80, fullMark: 100 },
+  { subject: 'Database', A: 75, fullMark: 100 },
+  { subject: 'AI/ML', A: 70, fullMark: 100 },
+  { subject: 'DevOps', A: 65, fullMark: 100 },
 ];
 
 const languageData = [
   { name: 'TypeScript', level: 90 },
-  { name: 'Python', level: 80 },
-  { name: 'Rust', level: 40 },
-  { name: 'Go', level: 65 },
-  { name: 'SQL', level: 70 },
+  { name: 'Python', level: 85 },
+  { name: 'JavaScript', level: 90 },
+  { name: 'SQL', level: 75 },
 ];
 
 export const SkillsApp: React.FC = () => {
@@ -85,7 +84,7 @@ export const SkillsApp: React.FC = () => {
       </div>
 
       <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-         {["React", "Next.js", "TailwindCSS", "Node.js", "Docker", "AWS", "Figma", "Git"].map((tech) => (
+         {["React", "Next.js", "TypeScript", "Python", "Node.js", "NestJS", "MySQL", "Prisma", "Docker", "GitHub", "TailwindCSS", "FastAPI"].map((tech) => (
             <div key={tech} className="bg-slate-800 p-4 rounded-lg border border-white/5 text-center hover:bg-slate-700 transition-colors">
                 <span className="font-mono text-sm text-cyan-200">{tech}</span>
             </div>
