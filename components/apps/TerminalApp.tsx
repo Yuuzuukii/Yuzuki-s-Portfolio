@@ -23,7 +23,7 @@ const FILE_SYSTEM: Record<string, FileSystemNode> = {
           }}
         }
       },
-      'about.txt': { type: 'file', content: 'Name: Masuo Yuzuki\nRole: Frontend Engineer / Student\nUniversity: Information Systems (4th Year)\nLocation: Tokyo, Japan' },
+      'about.txt': { type: 'file', content: 'Name: Masuo Yuzuki\nRole: Frontend Engineer / Graduate Student\nUniversity: Ritsumeikan University, Graduate School of Information Science and Engineering (1st Year)\nLocation: Tokyo, Japan' },
       'skills.json': { type: 'file', content: '{\n  "frontend": ["React", "TypeScript", "Next.js"],\n  "backend": ["Node.js", "Python"],\n  "tools": ["Docker", "AWS", "Figma"]\n}' },
       'contact.info': { type: 'file', content: 'Email: yuzuki.dev@example.com\nGitHub: github.com/yuzuki\nLinkedIn: linkedin.com/in/yuzuki' },
       'hidden': {

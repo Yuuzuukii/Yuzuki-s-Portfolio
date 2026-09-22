@@ -16,7 +16,7 @@ export const AboutApp: React.FC = () => {
           <div>
             <h2 className="text-2xl font-bold">増尾 柚希</h2>
             <p className="text-slate-400">Yuzuki Masuo</p>
-            <p className="text-slate-400 text-sm mt-1">Information Systems Student</p>
+            <p className="text-slate-400 text-sm mt-1">Information Science and Engineering Graduate Student</p>
           </div>
           
           <div className="flex gap-2">
@@ -53,10 +53,10 @@ export const AboutApp: React.FC = () => {
             <div className="bg-white/5 p-4 rounded-lg">
               <div className="flex justify-between items-baseline">
                 <h4 className="font-semibold text-lg">立命館大学 (Ritsumeikan University)</h4>
-                <span className="text-sm text-slate-400">2021 - Present</span>
+                <span className="text-sm text-slate-400">2022 - Present</span>
               </div>
-              <p className="text-slate-300 mt-1">情報理工学部 情報理工学科 4年生</p>
-              <p className="text-slate-300 text-sm">Faculty of Information Science and Engineering</p>
+              <p className="text-slate-300 mt-1">情報理工学研究科 1年生</p>
+              <p className="text-slate-300 text-sm">Graduate School of Information Science and Engineering</p>
               <p className="text-sm text-slate-400 mt-2">
                 社会知能研究室（SI Lab）にて、大規模言語モデルを用いたマルチエージェント対話プロトコルの研究に従事。
                 異文化コラボレーションを軸に、LLMマルチエージェントを用いて社会的課題を解決する研究を行っています。
@@ -69,7 +69,7 @@ export const AboutApp: React.FC = () => {
               <Code className="text-pink-400" /> Bio
             </h3>
             <p className="text-slate-300 leading-relaxed">
-              立命館大学情報理工学部4年生。社会知能研究室（SI Lab）にて、機械学習とデータ分析の研究に従事。
+              立命館大学情報理工学研究科1年生。社会知能研究室（SI Lab）にて、機械学習とデータ分析の研究に従事。
               ウェブ開発からAI技術まで幅広い技術領域に興味を持ち、理論と実践の両面から技術を探求しています。
               REST API、gRPCを用いたフルスタック開発の実務経験があります。
             </p>

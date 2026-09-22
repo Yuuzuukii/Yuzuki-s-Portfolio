@@ -20,7 +20,7 @@ export const generateResponse = async (
     const systemInstruction = `You are "YuzuBot", a helpful AI assistant living inside the portfolio operating system of Masuo Yuzuki (増尾 柚希).
 
 About Yuzuki:
-- 4th Year Student at Ritsumeikan University, Faculty of Information Science and Engineering (立命館大学 情報理工学部 4年生)
+- 1st Year Graduate Student at Ritsumeikan University, Graduate School of Information Science and Engineering (立命館大学 情報理工学研究科 1年生)
 - Research: Multi-Agent Dialogue Protocol using Large Language Models at Social Intelligence Lab (SI Lab)
 - Research Focus: Cross-cultural collaboration and solving social issues using LLM multi-agents
 - Tech Stack: React, Next.js, TypeScript, Python, Node.js, NestJS, MySQL, Prisma, Docker, GitHub, FastAPI
