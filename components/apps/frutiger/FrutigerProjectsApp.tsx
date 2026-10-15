@@ -54,10 +54,10 @@ const projects: Project[] = [
     title: "YuzukiOS Web Operating System",
     category: "Web OS / Frontend & React",
     type: "exe",
-    description: "ブラウザ上で完全動作するデュアルモードWebオペレーティングシステム。現代のWindows風UIと2000年代のFrutiger Aero（Windows Vista / 7 / XP）を瞬時に切り替え可能。",
+    description: "ブラウザ上で完全動作するデュアルモードWebオペレーティングシステム。現代のWindows風UIとFrutiger Aero（Windows Vista / 7 / XP）を瞬時に切り替え可能。",
     details: [
       "カスタムウィンドウマネージャー（ドラッグ、最小化、最大化、フォーカス管理）",
-      "2000年代Frutiger Aeroのスキューモーフィズム・ガラス質感・音響の完全再現",
+      "Frutiger Aeroのスキューモーフィズム・ガラス質感・音響の完全再現",
       "MSN Messenger風AIチャット、Task Manager風スキル診断、クラシックゲーム搭載",
       "Web Audio APIによるレトロシステム音・バブルポップ音のリアルタイム合成"
     ],

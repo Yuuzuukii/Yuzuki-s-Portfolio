@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SystemState, WindowState, AppConfig, OSTheme } from './types';
-import { User, Cpu, Terminal, MessageSquare, FolderOpen, Gamepad2, Disc, Sparkles, Clock } from 'lucide-react';
+import { User, Cpu, Terminal, MessageSquare, FolderOpen, Gamepad2, Disc } from 'lucide-react';
 import { BootScreen } from './components/BootScreen';
 import { LoginScreen } from './components/LoginScreen';
 import { Taskbar } from './components/Taskbar';
@@ -103,10 +103,11 @@ function App() {
       setActiveWindowId(null);
   };
 
-  // Mobile users skip boot and login screens
+  // Mobile users skip the boot animation and land on the login (lock) screen,
+  // which is the only place to switch between the modern and Aero eras
   useEffect(() => {
-    if (isMobile && systemState !== SystemState.DESKTOP) {
-      setSystemState(SystemState.DESKTOP);
+    if (isMobile && systemState === SystemState.BOOT) {
+      setSystemState(SystemState.LOGIN);
     }
   }, [isMobile, systemState]);
 
@@ -232,7 +233,6 @@ function App() {
             appComponents={APP_COMPONENTS} 
             onLogout={handleLogout} 
             osTheme={osTheme}
-            onToggleTheme={toggleTheme}
         />
     );
   }
@@ -244,7 +244,7 @@ function App() {
     return (
       <div className="relative h-screen w-screen overflow-hidden font-frutiger-ui select-none">
         {/* Dynamic Frutiger Aero Wallpaper (Image 2: Sky, Clouds, Birds, Eco-Towers, Giant Bubble, Fish, Sunflowers, Lemons) */}
-        <FrutigerWallpaperV2 onBubblePop={() => audio.playBubble()} />
+        <FrutigerWallpaperV2 />
 
         {/* Unboxed 3D Pushable Desktop Icons (Image 1: Manila folder, MSN buddies, CRT monitor, CD, Info sphere, Spiky mine) */}
         <FrutigerDesktopIconsV2 apps={currentApps} onAppClick={openApp} />
@@ -280,7 +280,6 @@ function App() {
                   openApp(id);
               }
           }}
-          onSwitchToModern={toggleTheme}
           onShowDesktop={handleShowDesktop}
         />
       </div>
@@ -300,25 +299,6 @@ function App() {
 
       {/* Modern Desktop Icons */}
       <DesktopIcons apps={currentApps} onAppClick={openApp} />
-
-      {/* Modern Desktop Time Portal Gadget */}
-      <div className="hidden lg:flex flex-col gap-2 absolute top-4 right-4 z-20">
-        <button
-          onClick={toggleTheme}
-          className="p-3 rounded-2xl bg-slate-900/80 hover:bg-slate-800/90 backdrop-blur-xl border border-cyan-500/30 shadow-[0_4px_20px_rgba(6,182,212,0.25)] flex items-center gap-3 text-white transition-all hover:scale-105 active:scale-95 group cursor-pointer"
-          title="2000年代のFrutiger Aeroモードへ切り替え"
-        >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-white shadow-md group-hover:rotate-12 transition-transform">
-            <Clock size={20} />
-          </div>
-          <div className="flex flex-col text-left">
-            <span className="text-xs font-bold text-cyan-300 flex items-center gap-1">
-              昔に戻る <Sparkles size={12} className="text-amber-400" />
-            </span>
-            <span className="text-[10px] text-slate-300 font-medium">2000s Frutiger Aero OS</span>
-          </div>
-        </button>
-      </div>
 
       {/* Modern Window Frames */}
       {windows.map(windowState => (

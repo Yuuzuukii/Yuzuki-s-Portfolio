@@ -148,7 +148,7 @@ export const FrutigerAboutApp: React.FC = () => {
                 <tbody>
                   <tr className="border-b border-slate-100">
                     <td className="py-1.5 font-bold text-slate-500 w-36">Operating System:</td>
-                    <td className="py-1.5 font-semibold text-slate-800">YuzuOS 2000s Frutiger Aero Edition (Build 6002)</td>
+                    <td className="py-1.5 font-semibold text-slate-800">YuzuOS Frutiger Aero Edition (Build 6002)</td>
                   </tr>
                   <tr className="border-b border-slate-100">
                     <td className="py-1.5 font-bold text-slate-500">Institution:</td>
@@ -414,7 +414,7 @@ export const FrutigerAboutApp: React.FC = () => {
         {activeTab === 'devices' && (
           <div className="space-y-3">
             <div className="p-2 bg-slate-100 border border-slate-300 text-[11px] text-slate-700 font-medium">
-              Hardware & Engineering Driver Tree (YUZU-WORKSTATION-2000)
+              Hardware & Engineering Driver Tree (YUZU-WORKSTATION)
             </div>
 
             <div className="border border-slate-300 p-3 bg-white font-mono text-[11px] space-y-2">

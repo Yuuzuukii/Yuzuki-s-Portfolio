@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AppConfig } from '../../types';
-import { Volume2, VolumeX, Sparkles, Power } from 'lucide-react';
+import { Volume2, VolumeX, Power } from 'lucide-react';
 import { audio } from '../../services/audioService';
 
 interface FrutigerTaskbarV2Props {
@@ -8,7 +8,6 @@ interface FrutigerTaskbarV2Props {
   openWindows: string[];
   activeWindowId: string | null;
   onAppClick: (id: string) => void;
-  onSwitchToModern: () => void;
   onShowDesktop: () => void;
 }
 
@@ -17,7 +16,6 @@ export const FrutigerTaskbarV2: React.FC<FrutigerTaskbarV2Props> = ({
   openWindows,
   activeWindowId,
   onAppClick,
-  onSwitchToModern,
   onShowDesktop,
 }) => {
   const [time, setTime] = useState(new Date());
@@ -97,20 +95,7 @@ export const FrutigerTaskbarV2: React.FC<FrutigerTaskbarV2Props> = ({
             })}
           </div>
 
-          {/* Time Machine Quick Switch from Start Menu */}
-          <div className="pt-2 mt-2 border-t border-sky-300 flex items-center justify-between">
-            <button
-              onClick={() => {
-                audio.playTimeWarp();
-                setIsStartOpen(false);
-                onSwitchToModern();
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-b from-sky-400 to-sky-600 hover:from-sky-300 hover:to-sky-500 text-white font-bold text-xs shadow-xs cursor-pointer active:translate-y-px"
-            >
-              <Sparkles size={13} className="text-amber-300" />
-              <span>未来へ進む (Modern OS)</span>
-            </button>
-
+          <div className="pt-2 mt-2 border-t border-sky-300 flex items-center justify-end">
             <button
               onClick={() => window.location.reload()}
               className="p-1.5 rounded bg-rose-100 hover:bg-rose-200 text-rose-700 border border-rose-300 transition-colors cursor-pointer"
@@ -207,19 +192,6 @@ export const FrutigerTaskbarV2: React.FC<FrutigerTaskbarV2Props> = ({
             borderLeft: '2px solid #0f172a',
           }}
         >
-          {/* Quick Time Portal Button in Taskbar */}
-          <button
-            onClick={() => {
-              audio.playTimeWarp();
-              onSwitchToModern();
-            }}
-            className="flex items-center gap-1 px-2 py-0.5 rounded bg-sky-500/80 hover:bg-sky-400 text-white text-[10px] font-bold border border-white/40 cursor-pointer shadow-xs active:translate-y-px"
-            title="未来へ進む (Modern OS)"
-          >
-            <Sparkles size={11} className="text-amber-300" />
-            <span>未来へ進む</span>
-          </button>
-
           {/* Audio Mute / Unmute */}
           <button
             onClick={handleSoundToggle}

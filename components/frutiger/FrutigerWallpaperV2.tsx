@@ -1,11 +1,8 @@
 import React, { useMemo } from 'react';
 import { IconFish } from '@frutiger.js/react';
 
-interface FrutigerWallpaperV2Props {
-  onBubblePop?: () => void;
-}
-
-export const FrutigerWallpaperV2: React.FC<FrutigerWallpaperV2Props> = ({ onBubblePop }) => {
+// Purely decorative backdrop: nothing here is interactive, so hovering never disturbs the animations
+export const FrutigerWallpaperV2: React.FC = () => {
   // Floating iridescent bubble particles
   const ambientBubbles = useMemo(() => {
     return Array.from({ length: 14 }).map((_, i) => ({
@@ -115,13 +112,11 @@ export const FrutigerWallpaperV2: React.FC<FrutigerWallpaperV2Props> = ({ onBubb
 
       {/* 6. Giant Translucent Bubble World with Eco-Meadow & Blue Butterfly (Image 2 featured element) */}
       <div 
-        className="absolute top-[28%] left-[16%] w-72 h-72 rounded-full overflow-hidden pointer-events-auto cursor-pointer shadow-[0_20px_50px_rgba(2,132,199,0.4)] transition-transform hover:scale-105 duration-300"
+        className="absolute top-[28%] left-[16%] w-72 h-72 rounded-full overflow-hidden shadow-[0_20px_50px_rgba(2,132,199,0.4)]"
         style={{
           border: '2px solid rgba(255,255,255,0.85)',
           background: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.2) 30%, rgba(56,189,248,0.3) 60%, rgba(2,132,199,0.7) 100%)',
         }}
-        onClick={onBubblePop}
-        title="Eco-Bubble World (Click to Pop!)"
       >
         {/* Inside the Bubble: Meadow, Sunshine & Miniature Skyline */}
         <div className="absolute inset-0 flex flex-col justify-end">
@@ -170,12 +165,11 @@ export const FrutigerWallpaperV2: React.FC<FrutigerWallpaperV2Props> = ({ onBubb
 
       {/* 7. Secondary Glass Bubble with Eco Leaf (Image 2 left) */}
       <div 
-        className="absolute top-[16%] left-[6%] w-24 h-24 rounded-full overflow-hidden pointer-events-auto cursor-pointer shadow-lg hover:scale-110 transition-transform"
+        className="absolute top-[16%] left-[6%] w-24 h-24 rounded-full overflow-hidden shadow-lg"
         style={{
           border: '1.5px solid rgba(255,255,255,0.9)',
           background: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.9) 0%, rgba(134,239,172,0.4) 40%, rgba(34,197,94,0.6) 100%)',
         }}
-        onClick={onBubblePop}
       >
         <div className="w-full h-full flex items-center justify-center">
           <svg viewBox="0 0 24 24" className="w-12 h-12 text-emerald-600 filter drop-shadow-md">
@@ -185,13 +179,13 @@ export const FrutigerWallpaperV2: React.FC<FrutigerWallpaperV2Props> = ({ onBubb
       </div>
 
       {/* 8. Swimming Tropical Fish in Clear Water (Image 2 bottom ocean) */}
-      <div className="absolute top-[58%] left-0 animate-swim pointer-events-auto cursor-pointer filter drop-shadow-lg hover:scale-125 transition-transform" onClick={onBubblePop}>
+      <div className="absolute top-[58%] left-0 animate-swim filter drop-shadow-lg">
         <div className="flex items-center gap-1 p-2 rounded-full bg-white/30 backdrop-blur-xs border border-white/60 shadow-md">
           <IconFish size={44} className="text-amber-500 filter drop-shadow-[0_2px_4px_rgba(245,158,11,0.7)]" />
         </div>
       </div>
 
-      <div className="absolute top-[68%] left-0 animate-swim-delayed pointer-events-auto cursor-pointer filter drop-shadow-lg hover:scale-125 transition-transform" onClick={onBubblePop}>
+      <div className="absolute top-[68%] left-0 animate-swim-delayed filter drop-shadow-lg">
         <div className="flex items-center gap-1 p-2 rounded-full bg-white/30 backdrop-blur-xs border border-white/60 shadow-md">
           <IconFish size={38} className="text-cyan-300 filter drop-shadow-[0_2px_4px_rgba(34,211,238,0.8)]" />
         </div>
@@ -295,7 +289,7 @@ export const FrutigerWallpaperV2: React.FC<FrutigerWallpaperV2Props> = ({ onBubb
       {ambientBubbles.map(b => (
         <div
           key={b.id}
-          className="absolute pointer-events-auto cursor-pointer transition-transform hover:scale-150"
+          className="absolute"
           style={{
             left: b.left,
             width: `${b.size}px`,
@@ -303,11 +297,6 @@ export const FrutigerWallpaperV2: React.FC<FrutigerWallpaperV2Props> = ({ onBubb
             animation: `float-bubble ${b.duration} linear infinite`,
             animationDelay: b.delay,
           }}
-          onClick={(e) => {
-            e.stopPropagation();
-            onBubblePop?.();
-          }}
-          title="Pop!"
         >
           <div 
             className="w-full h-full rounded-full relative"

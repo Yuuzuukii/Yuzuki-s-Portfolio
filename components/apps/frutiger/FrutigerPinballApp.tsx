@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, RotateCcw, Volume2, VolumeX, Eye, Sparkles, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
+import { Play, Volume2, VolumeX, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 import { audio } from '../../../services/audioService';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 
@@ -10,10 +10,30 @@ const TABLE_HEIGHT = 650;
 // Physics parameters - softened gravity for graceful, controllable 3D pinball motion
 const GRAVITY = 0.13;
 const BALL_RADIUS = 8.5;
-const FLIPPER_LENGTH = 56;
-const FLIPPER_HALF_WIDTH = 5.5;
+const FLIPPER_LENGTH = 66;
+const FLIPPER_HALF_WIDTH = 6;
 const FLIPPER_REST_ANGLE = 0.48; // ~27.5 degrees down
 const FLIPPER_UP_ANGLE = -0.38;  // ~-22 degrees up
+
+// Stand-up targets: light all four to trigger the TARGET BANK bonus
+const STAND_TARGETS = [
+  { x: 58, y: 235 },
+  { x: 58, y: 305 },
+  { x: 322, y: 235 },
+  { x: 322, y: 305 },
+];
+const STAND_TARGET_R = 8;
+const BALL_SAVER_MS = 12000;
+const COMBO_WINDOW_MS = 2500;
+
+// Crisp rendering on HiDPI screens (capped to keep fill-rate reasonable)
+const DPR = typeof window !== 'undefined' ? Math.min(2, window.devicePixelRatio || 1) : 1;
+
+// Ignore game hotkeys while the user is typing in another app's input
+const isTypingTarget = (target: EventTarget | null) => {
+  const el = target as HTMLElement | null;
+  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+};
 
 interface Particle {
   x: number;
@@ -64,7 +84,6 @@ export const FrutigerPinballApp: React.FC = () => {
 
   // Table targets state
   const topLanesRef = useRef<{ P: boolean; I: boolean; N: boolean }>({ P: false, I: false, N: false });
-  const [lanesState, setLanesState] = useState({ P: false, I: false, N: false });
 
   // Physics simulation state stored in refs for 60fps performance
   const ballRef = useRef<{
@@ -103,11 +122,23 @@ export const FrutigerPinballApp: React.FC = () => {
   const bumperFlashRef = useRef<[number, number, number]>([0, 0, 0]);
   const slingshotFlashRef = useRef<[number, number]>([0, 0]);
 
+  // Gameplay layer: targets, combo chain, ball saver, moving bonus target
+  const targetsLitRef = useRef<boolean[]>(STAND_TARGETS.map(() => false));
+  const targetFlashRef = useRef<number[]>(STAND_TARGETS.map(() => 0));
+  const comboRef = useRef<number>(0);
+  const lastHitTimeRef = useRef<number>(0);
+  const ballSaverUntilRef = useRef<number>(0);
+  const saverAvailableRef = useRef<boolean>(true);
+  const ballsRef = useRef<number>(3);
+  const frameRef = useRef<number>(0);
+  const movingCooldownRef = useRef<number>(0);
+  const movingFlashRef = useRef<number>(0);
+
   // Bumpers definition
   const bumpers = useRef([
-    { x: 135, y: 205, r: 24, pts: 500, label: '500' },
-    { x: 235, y: 205, r: 24, pts: 500, label: '500' },
-    { x: 185, y: 280, r: 26, pts: 1000, label: '1000' },
+    { x: 140, y: 205, r: 24, pts: 500, label: '500' },
+    { x: 240, y: 205, r: 24, pts: 500, label: '500' },
+    { x: 190, y: 280, r: 26, pts: 1000, label: '1000' },
   ]).current;
 
   // Sync state to refs for high-frequency physics ticks
@@ -180,10 +211,14 @@ export const FrutigerPinballApp: React.FC = () => {
   const resetGame = () => {
     setScore(0);
     setBalls(3);
+    ballsRef.current = 3;
+    saverAvailableRef.current = true;
     setMultiplier(1);
     setIsGameOver(false);
     topLanesRef.current = { P: false, I: false, N: false };
-    setLanesState({ P: false, I: false, N: false });
+    targetsLitRef.current = STAND_TARGETS.map(() => false);
+    comboRef.current = 0;
+    ballSaverUntilRef.current = 0;
     resetBallToPlunger();
     showAnnouncement('BALL 1 OF 3');
   };
@@ -232,6 +267,9 @@ export const FrutigerPinballApp: React.FC = () => {
       b.vy = -launchSpeed;
       b.vx = (Math.random() - 0.5) * 0.4;
       b.inPlay = true;
+      if (saverAvailableRef.current) {
+        ballSaverUntilRef.current = performance.now() + BALL_SAVER_MS;
+      }
       addParticles(b.x, b.y + 10, 12, '#ff4d6d');
       showAnnouncement(powerFraction > 0.8 ? 'MAX POWER LAUNCH!' : 'LAUNCHED!');
     }
@@ -296,7 +334,7 @@ export const FrutigerPinballApp: React.FC = () => {
   // Keyboard navigation: Left/Right Shift for Flippers, Space for Launch/Nudge
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (viewMode !== 'playing') return;
+      if (viewMode !== 'playing' || isTypingTarget(e.target)) return;
 
       if (e.code === 'ShiftLeft' || (e.key === 'Shift' && e.location === 1)) {
         if (!leftFlipperPressedRef.current) {
@@ -365,13 +403,26 @@ export const FrutigerPinballApp: React.FC = () => {
     const lanes = topLanesRef.current;
     if (lanes.P && lanes.I && lanes.N) {
       audio.playJackpot();
-      showAnnouncement('JACKPOT! 10,000 PTS + 2X MULTIPLIER!');
+      showAnnouncement('PIN JACKPOT! 10,000 + MULTIPLIER UP!');
       addScore(10000);
       setMultiplier(m => Math.min(5, m + 1));
       setTimeout(() => {
         topLanesRef.current = { P: false, I: false, N: false };
-        setLanesState({ P: false, I: false, N: false });
-      }, 1800);
+          }, 1800);
+    }
+  }, [addScore]);
+
+  // Chain hits within the combo window: every 3rd chained hit pays a growing bonus
+  const registerHit = useCallback((x: number, y: number) => {
+    const now = performance.now();
+    comboRef.current = now - lastHitTimeRef.current < COMBO_WINDOW_MS ? comboRef.current + 1 : 1;
+    lastHitTimeRef.current = now;
+    const c = comboRef.current;
+    if (c >= 3 && c % 3 === 0) {
+      const bonus = c * 100;
+      addScore(bonus);
+      addScorePopup(x, y - 18, `COMBO x${c} +${bonus}`);
+      audio.playJackpot();
     }
   }, [addScore]);
 
@@ -407,6 +458,9 @@ export const FrutigerPinballApp: React.FC = () => {
       const rightDiff = rightTarget - rightAngleRef.current;
       rightAngularVelRef.current = rightDiff * 0.45;
       rightAngleRef.current += rightAngularVelRef.current;
+
+      frameRef.current += 1;
+      if (movingCooldownRef.current > 0) movingCooldownRef.current -= 1;
 
       // 2. BALL SIMULATION
       const b = ballRef.current;
@@ -503,25 +557,24 @@ export const FrutigerPinballApp: React.FC = () => {
           collideSegment(b, 24, 415, 52, 515, 0.65);
           collideSegment(b, 52, 515, 115, 555, 0.65);
 
-          // Right Apron: from (356, 415) -> (328, 515) -> (245, 555)
+          // Right Apron: from (356, 415) -> (328, 515) -> (265, 555)
           collideSegment(b, 356, 415, 328, 515, 0.65);
-          collideSegment(b, 328, 515, 245, 555, 0.65);
+          collideSegment(b, 328, 515, 265, 555, 0.65);
 
           // Drain trough funnels (below flippers)
           collideSegment(b, 115, 565, 140, 640, 0.5);
-          collideSegment(b, 245, 565, 220, 640, 0.5);
+          collideSegment(b, 265, 565, 240, 640, 0.5);
 
           // ----------------------------------------------------------------
           // Top Rollover Lanes (P - I - N)
           // ----------------------------------------------------------------
-          const laneP = { x: 135, y: 95 };
-          const laneI = { x: 185, y: 95 };
-          const laneN = { x: 235, y: 95 };
+          const laneP = { x: 140, y: 95 };
+          const laneI = { x: 190, y: 95 };
+          const laneN = { x: 240, y: 95 };
 
           if (Math.abs(b.y - laneP.y) < 14 && Math.abs(b.x - laneP.x) < 14) {
             if (!topLanesRef.current.P) {
               topLanesRef.current.P = true;
-              setLanesState({ ...topLanesRef.current });
               audio.playTargetHit();
               addScore(250);
               addScorePopup(laneP.x, laneP.y, 'P +250');
@@ -531,7 +584,6 @@ export const FrutigerPinballApp: React.FC = () => {
           if (Math.abs(b.y - laneI.y) < 14 && Math.abs(b.x - laneI.x) < 14) {
             if (!topLanesRef.current.I) {
               topLanesRef.current.I = true;
-              setLanesState({ ...topLanesRef.current });
               audio.playTargetHit();
               addScore(250);
               addScorePopup(laneI.x, laneI.y, 'I +250');
@@ -541,7 +593,6 @@ export const FrutigerPinballApp: React.FC = () => {
           if (Math.abs(b.y - laneN.y) < 14 && Math.abs(b.x - laneN.x) < 14) {
             if (!topLanesRef.current.N) {
               topLanesRef.current.N = true;
-              setLanesState({ ...topLanesRef.current });
               audio.playTargetHit();
               addScore(250);
               addScorePopup(laneN.x, laneN.y, 'N +250');
@@ -559,9 +610,49 @@ export const FrutigerPinballApp: React.FC = () => {
               addParticles(bm.x, bm.y, 12, '#ef4444');
               addScore(bm.pts);
               addScorePopup(bm.x, bm.y - 12, `+${bm.pts}`);
+              registerHit(bm.x, bm.y);
               tableShakeRef.current = Math.min(5, tableShakeRef.current + 2);
             }
           });
+
+          // ----------------------------------------------------------------
+          // Stand-up targets: light all four for the TARGET BANK bonus
+          // ----------------------------------------------------------------
+          STAND_TARGETS.forEach((tg, idx) => {
+            if (collideCircle(b, tg.x, tg.y, STAND_TARGET_R, 4.5)) {
+              targetFlashRef.current[idx] = 1.0;
+              audio.playTargetHit();
+              addParticles(tg.x, tg.y, 8, '#fde68a');
+              registerHit(tg.x, tg.y);
+              if (!targetsLitRef.current[idx]) {
+                targetsLitRef.current[idx] = true;
+                addScore(500);
+                addScorePopup(tg.x, tg.y - 14, '+500');
+                if (targetsLitRef.current.every(Boolean)) {
+                  audio.playJackpot();
+                  showAnnouncement('TARGET BANK! 5,000 + MULTIPLIER UP!');
+                  addScore(5000);
+                  addScorePopup(190, 340, 'TARGET BANK +5000');
+                  setMultiplier(m => Math.min(5, m + 1));
+                  targetsLitRef.current = STAND_TARGETS.map(() => false);
+                }
+              } else {
+                addScore(100);
+              }
+            }
+          });
+
+          // Moving bonus target: sweeps across the mid field (risk/reward shot)
+          const movingX = 190 + Math.sin(frameRef.current * 0.022) * 80;
+          if (collideCircle(b, movingX, 360, 9, 5.5) && movingCooldownRef.current <= 0) {
+            movingCooldownRef.current = 20;
+            movingFlashRef.current = 1.0;
+            audio.playBumper();
+            addParticles(movingX, 360, 14, '#fbbf24');
+            addScore(1500);
+            addScorePopup(movingX, 340, 'BONUS +1500');
+            registerHit(movingX, 360);
+          }
 
           // ----------------------------------------------------------------
           // Standard Slingshots (Spacious channels > 40px width, anti-stuck apex)
@@ -582,18 +673,19 @@ export const FrutigerPinballApp: React.FC = () => {
               addParticles(b.x, b.y, 8, '#f43f5e');
               addScore(250);
               addScorePopup(105, 470, '+250');
+              registerHit(105, 470);
               tableShakeRef.current = Math.min(4, tableShakeRef.current + 2);
             }
           );
 
-          // Right Slingshot: Apex (305, 415), Flipper Corner (255, 505), Base (290, 495)
+          // Right Slingshot: Apex (305, 415), Flipper Corner (275, 505), Base (310, 495)
           collideSlingshot(
             b,
             305,
             415,
-            255,
+            275,
             505,
-            290,
+            310,
             495,
             false,
             () => {
@@ -601,7 +693,8 @@ export const FrutigerPinballApp: React.FC = () => {
               slingshotFlashRef.current[1] = 1.0;
               addParticles(b.x, b.y, 8, '#f43f5e');
               addScore(250);
-              addScorePopup(255, 470, '+250');
+              addScorePopup(275, 470, '+250');
+              registerHit(275, 470);
               tableShakeRef.current = Math.min(4, tableShakeRef.current + 2);
             }
           );
@@ -632,7 +725,7 @@ export const FrutigerPinballApp: React.FC = () => {
           // ----------------------------------------------------------------
           // Right Flipper Collision (True oriented capsule)
           // ----------------------------------------------------------------
-          const rightPivot = { x: 245, y: 555 };
+          const rightPivot = { x: 265, y: 555 };
           const rightTip = {
             x: rightPivot.x + Math.cos(rightAngleRef.current) * FLIPPER_LENGTH,
             y: rightPivot.y + Math.sin(rightAngleRef.current) * FLIPPER_LENGTH,
@@ -655,22 +748,32 @@ export const FrutigerPinballApp: React.FC = () => {
           // ----------------------------------------------------------------
           // Drain Sensor (Bottom gap between flippers)
           // ----------------------------------------------------------------
+          if (b.y > 625 && performance.now() < ballSaverUntilRef.current) {
+            ballSaverUntilRef.current = 0;
+            saverAvailableRef.current = false;
+            audio.playJackpot();
+            showAnnouncement('BALL SAVED! RELAUNCH');
+            resetBallToPlunger();
+            break;
+          }
           if (b.y > 625) {
             audio.playDrain();
             b.inPlay = false;
-            setBalls(prevBalls => {
-              const next = prevBalls - 1;
-              if (next <= 0) {
-                setIsGameOver(true);
-                showAnnouncement('GAME OVER - PRESS PLAY AGAIN');
-              } else {
-                showAnnouncement(`BALL LOST! ${next} BALLS REMAINING`);
-                setTimeout(() => {
-                  resetBallToPlunger();
-                }, 900);
-              }
-              return Math.max(0, next);
-            });
+            ballSaverUntilRef.current = 0;
+            comboRef.current = 0;
+            const next = Math.max(0, ballsRef.current - 1);
+            ballsRef.current = next;
+            setBalls(next);
+            if (next === 0) {
+              setIsGameOver(true);
+              showAnnouncement('GAME OVER - PRESS PLAY AGAIN');
+            } else {
+              saverAvailableRef.current = true;
+              showAnnouncement(`BALL LOST! BALL ${4 - next} OF 3`);
+              setTimeout(() => {
+                resetBallToPlunger();
+              }, 900);
+            }
             break;
           }
         }
@@ -713,6 +816,7 @@ export const FrutigerPinballApp: React.FC = () => {
         ctx.translate(sx, sy);
       }
 
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
       ctx.clearRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT);
 
       // 1. Playfield Base: Metallic Obsidian & Crimson Gradient
@@ -724,6 +828,14 @@ export const FrutigerPinballApp: React.FC = () => {
       ctx.fillStyle = tableGrad;
       ctx.fillRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT);
 
+      // Soft central playfield light pool + edge vignette
+      const pool = ctx.createRadialGradient(190, 270, 20, 190, 270, 330);
+      pool.addColorStop(0, 'rgba(244, 63, 94, 0.16)');
+      pool.addColorStop(0.55, 'rgba(159, 18, 57, 0.06)');
+      pool.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
+      ctx.fillStyle = pool;
+      ctx.fillRect(0, 0, TABLE_WIDTH, TABLE_HEIGHT);
+
       // 2. 3D Beveled Outer Cabinet Trim
       ctx.strokeStyle = '#475569';
       ctx.lineWidth = 6;
@@ -733,7 +845,7 @@ export const FrutigerPinballApp: React.FC = () => {
       ctx.strokeRect(5, 5, TABLE_WIDTH - 10, TABLE_HEIGHT - 10);
 
       // Subtle Neon Cyber Grid on Playfield
-      ctx.strokeStyle = 'rgba(239, 68, 68, 0.08)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.025)';
       ctx.lineWidth = 1;
       for (let x = 20; x < TABLE_WIDTH; x += 25) {
         ctx.beginPath();
@@ -771,8 +883,12 @@ export const FrutigerPinballApp: React.FC = () => {
       ctx.shadowBlur = 0;
 
       // Outer Left Wall & Apron
-      ctx.strokeStyle = '#64748b';
+      ctx.strokeStyle = '#a8b3c7';
       ctx.lineWidth = 4;
+      ctx.shadowColor = 'rgba(0,0,0,0.7)';
+      ctx.shadowBlur = 5;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(24, 140);
       ctx.lineTo(24, 415);
@@ -792,27 +908,46 @@ export const FrutigerPinballApp: React.FC = () => {
       ctx.shadowBlur = 0;
 
       // Plunger Lane Right Outer Wall
-      ctx.strokeStyle = '#64748b';
+      ctx.strokeStyle = '#a8b3c7';
       ctx.lineWidth = 4;
+      ctx.shadowColor = 'rgba(0,0,0,0.7)';
+      ctx.shadowBlur = 5;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(392, 140);
       ctx.lineTo(392, 610);
       ctx.stroke();
 
       // Right Apron Guide to Flipper
-      ctx.strokeStyle = '#64748b';
+      ctx.strokeStyle = '#a8b3c7';
       ctx.lineWidth = 4;
+      ctx.shadowColor = 'rgba(0,0,0,0.7)';
+      ctx.shadowBlur = 5;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(356, 415);
       ctx.lineTo(328, 515);
-      ctx.lineTo(245, 555);
+      ctx.lineTo(265, 555);
       ctx.stroke();
+
+      // Drain trough guides below the flippers
+      ctx.strokeStyle = '#a8b3c7';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(115, 565);
+      ctx.lineTo(140, 640);
+      ctx.moveTo(265, 565);
+      ctx.lineTo(240, 640);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
 
       // 3. Top Rollover Lanes (P - I - N)
       const lanes = [
-        { label: 'P', x: 135, active: lanesState.P },
-        { label: 'I', x: 185, active: lanesState.I },
-        { label: 'N', x: 235, active: lanesState.N },
+        { label: 'P', x: 140, active: topLanesRef.current.P },
+        { label: 'I', x: 190, active: topLanesRef.current.I },
+        { label: 'N', x: 240, active: topLanesRef.current.N },
       ];
       lanes.forEach(l => {
         ctx.fillStyle = l.active ? '#ef4444' : '#1e1b2e';
@@ -880,6 +1015,86 @@ export const FrutigerPinballApp: React.FC = () => {
         ctx.restore();
       });
 
+      // 4b. Stand-up targets (gold when lit)
+      STAND_TARGETS.forEach((tg, idx) => {
+        const flash = targetFlashRef.current[idx];
+        if (flash > 0) targetFlashRef.current[idx] = Math.max(0, flash - 0.07);
+        const lit = targetsLitRef.current[idx];
+        ctx.save();
+        ctx.shadowColor = lit ? '#fbbf24' : '#64748b';
+        ctx.shadowBlur = lit ? 14 + flash * 10 : 4;
+        const tGrad = ctx.createRadialGradient(tg.x - 2, tg.y - 2, 1, tg.x, tg.y, STAND_TARGET_R);
+        tGrad.addColorStop(0, lit ? '#ffffff' : '#94a3b8');
+        tGrad.addColorStop(0.5, lit ? '#fbbf24' : '#334155');
+        tGrad.addColorStop(1, lit ? '#b45309' : '#0f172a');
+        ctx.fillStyle = tGrad;
+        ctx.strokeStyle = flash > 0 ? '#ffffff' : lit ? '#fde68a' : '#64748b';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(tg.x, tg.y, STAND_TARGET_R, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      // 4c. Moving bonus target
+      {
+        const mx = 190 + Math.sin(frameRef.current * 0.022) * 80;
+        const mf = movingFlashRef.current;
+        if (mf > 0) movingFlashRef.current = Math.max(0, mf - 0.06);
+        ctx.save();
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 10 + mf * 14;
+        const mGrad = ctx.createRadialGradient(mx - 2, 358, 1, mx, 360, 9);
+        mGrad.addColorStop(0, '#ffffff');
+        mGrad.addColorStop(0.5, '#fbbf24');
+        mGrad.addColorStop(1, '#92400e');
+        ctx.fillStyle = mGrad;
+        ctx.beginPath();
+        ctx.arc(mx, 360, 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#7c2d12';
+        ctx.font = 'bold 10px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('★', mx, 360.5);
+        ctx.restore();
+      }
+
+      // 4d. HUD overlays: combo chain + ball saver timer
+      {
+        const now = performance.now();
+        if (comboRef.current >= 2 && now - lastHitTimeRef.current < COMBO_WINDOW_MS) {
+          const left = 1 - (now - lastHitTimeRef.current) / COMBO_WINDOW_MS;
+          ctx.save();
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = '#fde68a';
+          ctx.shadowColor = '#f59e0b';
+          ctx.shadowBlur = 8;
+          ctx.font = 'bold 13px monospace';
+          ctx.fillText(`COMBO x${comboRef.current}`, 34, 395);
+          ctx.fillStyle = 'rgba(255,255,255,0.15)';
+          ctx.fillRect(34, 405, 70, 3);
+          ctx.fillStyle = '#fbbf24';
+          ctx.fillRect(34, 405, 70 * left, 3);
+          ctx.restore();
+        }
+        const saverLeft = ballSaverUntilRef.current - now;
+        if (saverLeft > 0 && ballRef.current.inPlay) {
+          ctx.save();
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = saverLeft < 3000 && Math.floor(now / 150) % 2 ? '#ffffff' : '#7dd3fc';
+          ctx.shadowColor = '#38bdf8';
+          ctx.shadowBlur = 8;
+          ctx.font = 'bold 11px monospace';
+          ctx.fillText(`SAVER ${(saverLeft / 1000).toFixed(1)}s`, 346, 395);
+          ctx.restore();
+        }
+      }
+
       // 5. Left Slingshot Block
       {
         const flash = slingshotFlashRef.current[0];
@@ -887,7 +1102,7 @@ export const FrutigerPinballApp: React.FC = () => {
 
         ctx.save();
         // Translucent acrylic triangular base
-        ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
+        ctx.fillStyle = 'rgba(244, 63, 94, 0.28)';
         ctx.strokeStyle = flash > 0 ? '#ffffff' : '#ef4444';
         ctx.lineWidth = 2.5;
         if (flash > 0) {
@@ -933,7 +1148,7 @@ export const FrutigerPinballApp: React.FC = () => {
         if (flash > 0) slingshotFlashRef.current[1] = Math.max(0, flash - 0.08);
 
         ctx.save();
-        ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
+        ctx.fillStyle = 'rgba(244, 63, 94, 0.28)';
         ctx.strokeStyle = flash > 0 ? '#ffffff' : '#ef4444';
         ctx.lineWidth = 2.5;
         if (flash > 0) {
@@ -942,8 +1157,8 @@ export const FrutigerPinballApp: React.FC = () => {
         }
         ctx.beginPath();
         ctx.moveTo(305, 415);
-        ctx.lineTo(255, 505);
-        ctx.lineTo(290, 495);
+        ctx.lineTo(275, 505);
+        ctx.lineTo(310, 495);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
@@ -955,13 +1170,13 @@ export const FrutigerPinballApp: React.FC = () => {
         ctx.shadowBlur = 8;
         ctx.beginPath();
         ctx.moveTo(305, 415);
-        ctx.lineTo(255, 505);
+        ctx.lineTo(275, 505);
         ctx.stroke();
 
         [
           { x: 305, y: 415 },
-          { x: 255, y: 505 },
-          { x: 290, y: 495 },
+          { x: 275, y: 505 },
+          { x: 310, y: 495 },
         ].forEach(pt => {
           ctx.shadowBlur = 0;
           ctx.fillStyle = '#cbd5e1';
@@ -999,14 +1214,19 @@ export const FrutigerPinballApp: React.FC = () => {
           ctx.shadowColor = '#ef4444';
           ctx.shadowBlur = 12;
         } else {
-          fGrad.addColorStop(0, '#fef08a');
-          fGrad.addColorStop(0.3, '#f59e0b');
-          fGrad.addColorStop(0.8, '#b45309');
-          fGrad.addColorStop(1, '#78350f');
+          fGrad.addColorStop(0, '#ffe4e6');
+          fGrad.addColorStop(0.3, '#fb7185');
+          fGrad.addColorStop(0.8, '#be123c');
+          fGrad.addColorStop(1, '#6b0f2a');
         }
         ctx.fillStyle = fGrad;
         ctx.beginPath();
-        ctx.roundRect(0, -FLIPPER_HALF_WIDTH, FLIPPER_LENGTH, FLIPPER_HALF_WIDTH * 2, FLIPPER_HALF_WIDTH);
+        ctx.moveTo(0, -FLIPPER_HALF_WIDTH - 1.5);
+        ctx.lineTo(FLIPPER_LENGTH, -FLIPPER_HALF_WIDTH * 0.55);
+        ctx.arc(FLIPPER_LENGTH, 0, FLIPPER_HALF_WIDTH * 0.55, -Math.PI / 2, Math.PI / 2);
+        ctx.lineTo(0, FLIPPER_HALF_WIDTH + 1.5);
+        ctx.arc(0, 0, FLIPPER_HALF_WIDTH + 1.5, Math.PI / 2, -Math.PI / 2);
+        ctx.closePath();
         ctx.fill();
 
         // Silicone rubber band sleeve on edge
@@ -1029,7 +1249,7 @@ export const FrutigerPinballApp: React.FC = () => {
       };
 
       renderFlipperBat(115, 555, leftAngleRef.current, leftFlipperPressedRef.current);
-      renderFlipperBat(245, 555, rightAngleRef.current, rightFlipperPressedRef.current);
+      renderFlipperBat(265, 555, rightAngleRef.current, rightFlipperPressedRef.current);
 
       // 8. Plunger Spring in shooter lane
       ctx.save();
@@ -1166,7 +1386,7 @@ export const FrutigerPinballApp: React.FC = () => {
       running = false;
       cancelAnimationFrame(animId);
     };
-  }, [bumpers, checkAllLanesLit, addScore]);
+  }, [bumpers, checkAllLanesLit, addScore, registerHit]);
 
   return (
     <div className="h-full w-full bg-[#0a0508] flex flex-col justify-between items-center select-none overflow-hidden font-sans text-zinc-100">
@@ -1253,7 +1473,7 @@ export const FrutigerPinballApp: React.FC = () => {
                 </span>
               </div>
               <h1 className="text-xl sm:text-2xl font-black text-white tracking-widest uppercase drop-shadow-[0_2px_10px_rgba(239,68,68,0.6)]">
-                CYBER PINBALL 2000
+                CYBER PINBALL
               </h1>
             </div>
 
@@ -1261,7 +1481,7 @@ export const FrutigerPinballApp: React.FC = () => {
             <div className="relative flex-1 min-h-0 w-full flex items-center justify-center my-1">
               {/* 3D Angled Cabinet Showcase Frame */}
               <div 
-                className="relative h-full max-h-[340px] aspect-[400/620] rounded-xl overflow-hidden flex flex-col items-center justify-between p-2 border-2"
+                className="relative h-full max-h-[340px] aspect-[400/650] rounded-xl overflow-hidden flex flex-col items-center justify-between p-2 border-2"
                 style={{
                   background: 'linear-gradient(180deg, #18080c 0%, #0d0407 100%)',
                   borderColor: '#475569 #1e293b #1e293b #475569',
@@ -1299,9 +1519,9 @@ export const FrutigerPinballApp: React.FC = () => {
                   <div className="flex flex-col items-center gap-1.5 relative z-1 my-auto">
                     <div className="flex gap-4">
                       <div className="w-6 h-6 rounded-full bg-gradient-to-br from-red-400 to-rose-900 border border-white shadow-[0_0_10px_#ef4444] animate-pulse flex items-center justify-center text-[7px] font-bold text-white">500</div>
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-red-400 to-rose-900 border border-white shadow-[0_0_10px_#ef4444] animate-pulse delay-150 flex items-center justify-center text-[7px] font-bold text-white">500</div>
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-red-400 to-rose-900 border border-white shadow-[0_0_10px_#ef4444] animate-pulse flex items-center justify-center text-[7px] font-bold text-white" style={{ animationDelay: '0.3s' }}>500</div>
                     </div>
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-500 to-rose-950 border-2 border-white shadow-[0_0_14px_#ef4444] animate-pulse delay-300 flex items-center justify-center text-[8px] font-bold text-white">1000</div>
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-500 to-rose-950 border-2 border-white shadow-[0_0_14px_#ef4444] animate-pulse flex items-center justify-center text-[8px] font-bold text-white" style={{ animationDelay: '0.6s' }}>1000</div>
                   </div>
 
                   {/* Slingshots & Flippers */}
@@ -1359,6 +1579,9 @@ export const FrutigerPinballApp: React.FC = () => {
                 <p className="text-[9px] text-zinc-400 mt-0.5">
                   右下のつまみを引いて離すと発射！ (スペースキーでも操作可能)
                 </p>
+                <p className="text-[9px] text-amber-300/80 mt-0.5">
+                  P-I-Nレーン・金ターゲット4つで倍率UP / 動く★は +1500 / 連続ヒットでコンボ
+                </p>
               </div>
             </div>
           </div>
@@ -1376,9 +1599,9 @@ export const FrutigerPinballApp: React.FC = () => {
           {/* Canvas Rendering Plane */}
           <canvas
             ref={canvasRef}
-            width={TABLE_WIDTH}
-            height={TABLE_HEIGHT}
-            className="rounded-lg shadow-2xl border border-zinc-800 max-h-[calc(100vh-230px)] h-auto w-auto aspect-[400/650] object-contain"
+            width={TABLE_WIDTH * DPR}
+            height={TABLE_HEIGHT * DPR}
+            className="rounded-lg shadow-2xl border border-zinc-800 max-h-[calc(100vh-230px)] max-w-[min(400px,100%)] h-auto w-auto aspect-[400/650] object-contain"
             style={{
               boxShadow: '0 10px 40px rgba(0,0,0,0.95), 0 0 25px rgba(220, 38, 38, 0.25)',
               transform: screenShake > 0 ? `scale(1.01)` : 'none',
@@ -1436,6 +1659,7 @@ export const FrutigerPinballApp: React.FC = () => {
                   setLeftFlipperActive(true);
                 }}
                 onMouseUp={() => setLeftFlipperActive(false)}
+                onMouseLeave={() => setLeftFlipperActive(false)}
               >
                 ◀ L-SHIFT
               </div>
@@ -1451,6 +1675,7 @@ export const FrutigerPinballApp: React.FC = () => {
                   setRightFlipperActive(true);
                 }}
                 onMouseUp={() => setRightFlipperActive(false)}
+                onMouseLeave={() => setRightFlipperActive(false)}
               >
                 R-SHIFT ▶
               </div>
@@ -1512,22 +1737,15 @@ export const FrutigerPinballApp: React.FC = () => {
         >
           {/* Left Flipper Button */}
           <button
-            onMouseDown={() => {
+            onPointerDown={e => {
+              e.currentTarget.setPointerCapture(e.pointerId);
               audio.playFlipper();
               setLeftFlipperActive(true);
             }}
-            onMouseUp={() => setLeftFlipperActive(false)}
-            onMouseLeave={() => setLeftFlipperActive(false)}
-            onTouchStart={e => {
-              e.preventDefault();
-              audio.playFlipper();
-              setLeftFlipperActive(true);
-            }}
-            onTouchEnd={e => {
-              e.preventDefault();
-              setLeftFlipperActive(false);
-            }}
-            className={`flex-1 py-2.5 px-3 rounded-xl font-black text-xs sm:text-sm tracking-wide text-white transition-all select-none cursor-pointer border flex items-center justify-center gap-1 ${
+            onPointerUp={() => setLeftFlipperActive(false)}
+            onPointerCancel={() => setLeftFlipperActive(false)}
+            onContextMenu={e => e.preventDefault()}
+            className={`flex-1 py-2.5 px-3 rounded-xl font-black text-xs sm:text-sm tracking-wide text-white transition-all select-none cursor-pointer touch-none border flex items-center justify-center gap-1 ${
               leftFlipperActive
                 ? 'bg-red-500 scale-98 shadow-[0_0_20px_#ef4444]'
                 : 'bg-gradient-to-b from-red-600 to-rose-900 shadow-lg'
@@ -1554,22 +1772,15 @@ export const FrutigerPinballApp: React.FC = () => {
 
           {/* Right Flipper Button */}
           <button
-            onMouseDown={() => {
+            onPointerDown={e => {
+              e.currentTarget.setPointerCapture(e.pointerId);
               audio.playFlipper();
               setRightFlipperActive(true);
             }}
-            onMouseUp={() => setRightFlipperActive(false)}
-            onMouseLeave={() => setRightFlipperActive(false)}
-            onTouchStart={e => {
-              e.preventDefault();
-              audio.playFlipper();
-              setRightFlipperActive(true);
-            }}
-            onTouchEnd={e => {
-              e.preventDefault();
-              setRightFlipperActive(false);
-            }}
-            className={`flex-1 py-2.5 px-3 rounded-xl font-black text-xs sm:text-sm tracking-wide text-white transition-all select-none cursor-pointer border flex items-center justify-center gap-1 ${
+            onPointerUp={() => setRightFlipperActive(false)}
+            onPointerCancel={() => setRightFlipperActive(false)}
+            onContextMenu={e => e.preventDefault()}
+            className={`flex-1 py-2.5 px-3 rounded-xl font-black text-xs sm:text-sm tracking-wide text-white transition-all select-none cursor-pointer touch-none border flex items-center justify-center gap-1 ${
               rightFlipperActive
                 ? 'bg-red-500 scale-98 shadow-[0_0_20px_#ef4444]'
                 : 'bg-gradient-to-b from-red-600 to-rose-900 shadow-lg'
@@ -1738,7 +1949,9 @@ function collideFlipper(
   const diffX = b.x - closeX;
   const diffY = b.y - closeY;
   const dist = Math.hypot(diffX, diffY);
-  const minDist = BALL_RADIUS + FLIPPER_HALF_WIDTH;
+  // Bat is drawn tapered: thick at the pivot, thin at the tip
+  const halfWidth = (FLIPPER_HALF_WIDTH + 1.5) * (1 - t) + FLIPPER_HALF_WIDTH * 0.55 * t;
+  const minDist = BALL_RADIUS + halfWidth;
 
   if (dist < minDist) {
     let nx = dist > 0.0001 ? diffX / dist : 0;

@@ -209,7 +209,7 @@ export const FrutigerWindowFrameV2: React.FC<FrutigerWindowFrameV2Props> = ({
         </span>
         <div className="ml-auto flex items-center gap-1.5 text-[10px] text-slate-600 font-mono">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>v2000.Aero</span>
+          <span>YuzuOS Aero</span>
         </div>
       </div>
 

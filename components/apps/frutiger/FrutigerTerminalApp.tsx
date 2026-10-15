@@ -28,7 +28,7 @@ const DOS_FILE_SYSTEM: Record<string, FileNode> = {
             type: 'file',
             size: 8598322,
             date: '2024-09-01  09:20',
-            content: 'PROJECT: YuzukiOS Web Operating System\nTYPE: Dual-Engine Interactive Web Portfolio\nSTACK: React 19, TypeScript, Tailwind CSS, Vite, Web Audio\nDESC: Faithful recreation of modern Windows and 2000s Frutiger Aero.'
+            content: 'PROJECT: YuzukiOS Web Operating System\nTYPE: Dual-Engine Interactive Web Portfolio\nSTACK: React 19, TypeScript, Tailwind CSS, Vite, Web Audio\nDESC: Faithful recreation of modern Windows and Frutiger Aero.'
           },
           'MultiAgent_Dialogue.doc': {
             type: 'file',
@@ -136,7 +136,7 @@ export const FrutigerTerminalApp: React.FC = () => {
         return;
 
       case 'ver':
-        newLines.push("Microsoft Windows [Version 6.0.6002] Service Pack 2 (YuzuOS 2000s Aero Edition)");
+        newLines.push("Microsoft Windows [Version 6.0.6002] Service Pack 2 (YuzuOS Aero Edition)");
         break;
 
       case 'theme':

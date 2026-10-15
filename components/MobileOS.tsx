@@ -4,7 +4,6 @@ import { Battery, Wifi, Signal, ChevronLeft, Circle, Square, Sun } from 'lucide-
 
 import { OSTheme } from '../types';
 import { audio } from '../services/audioService';
-import { Sparkles, Clock } from 'lucide-react';
 import { FRUTIGER_COMPONENTS } from './frutiger/FrutigerWindowFrameV2';
 
 interface MobileOSProps {
@@ -12,7 +11,6 @@ interface MobileOSProps {
   appComponents: Record<string, React.FC>;
   onLogout: () => void;
   osTheme: OSTheme;
-  onToggleTheme: () => void;
 }
 
 export const MobileOS: React.FC<MobileOSProps> = ({ 
@@ -20,7 +18,6 @@ export const MobileOS: React.FC<MobileOSProps> = ({
   appComponents, 
   onLogout,
   osTheme,
-  onToggleTheme
 }) => {
   const [activeAppId, setActiveAppId] = useState<string | null>(null);
   const [time, setTime] = useState(new Date());
@@ -139,17 +136,6 @@ export const MobileOS: React.FC<MobileOSProps> = ({
                   <Sun size={18} className="text-yellow-300" />
                   <span>Tokyo 24°C</span>
               </div>
-              <button
-                onClick={() => {
-                  audio.playTimeWarp();
-                  onToggleTheme();
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 transition-all text-white shadow-md active:scale-95"
-                title="時代切り替え"
-              >
-                <Sparkles size={14} className="text-amber-300" />
-                <span>{isFrutiger ? '未来へ進む' : '昔に戻る'}</span>
-              </button>
             </div>
         </div>
 

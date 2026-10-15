@@ -1,10 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, RotateCcw, Volume2, VolumeX, Pause, Sparkles, Trophy, Zap, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 import { audio } from '../../services/audioService';
-import { useIsMobile } from '../../hooks/useIsMobile';
 
 const GRID_SIZE = 22; // 22 x 22 grid
 const INITIAL_SPEED = 110; // ms per tick
+const CANVAS_SIZE = 400; // logical px
+// Crisp rendering on HiDPI screens (capped to keep fill-rate reasonable)
+const DPR = typeof window !== 'undefined' ? Math.min(2, window.devicePixelRatio || 1) : 1;
+
+// Ignore game hotkeys while the user is typing in another app's input
+const isTypingTarget = (target: EventTarget | null) => {
+  const el = target as HTMLElement | null;
+  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+};
 
 type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 
@@ -24,7 +32,6 @@ interface Particle {
 }
 
 export const SnakeGameApp: React.FC = () => {
-  const isMobile = useIsMobile();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const [score, setScore] = useState<number>(0);
@@ -56,6 +63,11 @@ export const SnakeGameApp: React.FC = () => {
   const particlesRef = useRef<Particle[]>([]);
   const lastEatTimeRef = useRef<number>(0);
   const lastTickTimeRef = useRef<number>(0);
+  const dirQueueRef = useRef<Direction[]>([]);
+  const scoreRef = useRef<number>(0);
+  const levelRef = useRef<number>(1);
+  const comboRef = useRef<number>(1);
+  const deadRef = useRef<boolean>(false);
 
   // Sound toggle
   const toggleMute = () => {
@@ -92,7 +104,8 @@ export const SnakeGameApp: React.FC = () => {
         };
         bonusCollision = snake.some(s => s.x === bonusPos.x && s.y === bonusPos.y) || 
                          (bonusPos.x === newFood.x && bonusPos.y === newFood.y);
-      } while (bonusCollision);
+        attempts++;
+      } while (bonusCollision && attempts < 200);
       bonusFoodRef.current = { ...bonusPos, life: 120 }; // lasts ~120 frames
     }
   }, []);
@@ -101,7 +114,7 @@ export const SnakeGameApp: React.FC = () => {
   const addParticles = (gx: number, gy: number, count: number, color: string) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const cellSize = canvas.width / GRID_SIZE;
+    const cellSize = CANVAS_SIZE / GRID_SIZE;
     const px = (gx + 0.5) * cellSize;
     const py = (gy + 0.5) * cellSize;
 
@@ -130,6 +143,12 @@ export const SnakeGameApp: React.FC = () => {
     ];
     dirRef.current = 'UP';
     nextDirRef.current = 'UP';
+    dirQueueRef.current = [];
+    scoreRef.current = 0;
+    levelRef.current = 1;
+    comboRef.current = 1;
+    deadRef.current = false;
+    lastEatTimeRef.current = 0;
     particlesRef.current = [];
     bonusFoodRef.current = null;
     setScore(0);
@@ -144,16 +163,38 @@ export const SnakeGameApp: React.FC = () => {
 
   // Handle direction changes
   const changeDirection = useCallback((newDir: Direction) => {
-    const cur = dirRef.current;
-    if (newDir === 'UP' && cur !== 'DOWN') nextDirRef.current = 'UP';
-    if (newDir === 'DOWN' && cur !== 'UP') nextDirRef.current = 'DOWN';
-    if (newDir === 'LEFT' && cur !== 'RIGHT') nextDirRef.current = 'LEFT';
-    if (newDir === 'RIGHT' && cur !== 'LEFT') nextDirRef.current = 'RIGHT';
+    const queue = dirQueueRef.current;
+    const last = queue.length > 0 ? queue[queue.length - 1] : dirRef.current;
+    const opposite: Record<Direction, Direction> = { UP: 'DOWN', DOWN: 'UP', LEFT: 'RIGHT', RIGHT: 'LEFT' };
+    if (newDir === last || newDir === opposite[last] || queue.length >= 2) return;
+    queue.push(newDir);
+  }, []);
+
+  // Add points and keep high score / level in sync (side effects outside state updaters)
+  const addPoints = useCallback((pts: number) => {
+    const newScore = scoreRef.current + pts;
+    scoreRef.current = newScore;
+    setScore(newScore);
+    setHighScore(h => Math.max(h, newScore));
+    try {
+      const saved = parseInt(localStorage.getItem('yuzuos_snake_highscore') || '0', 10);
+      if (newScore > saved) localStorage.setItem('yuzuos_snake_highscore', newScore.toString());
+    } catch {
+      // storage unavailable: keep in-memory high score only
+    }
+    const nextLevel = Math.floor(newScore / 500) + 1;
+    if (nextLevel > levelRef.current) {
+      levelRef.current = nextLevel;
+      setLevel(nextLevel);
+      audio.playBumper();
+      setAnnouncement(`LEVEL UP! SPEED LVL ${nextLevel}`);
+    }
   }, []);
 
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isTypingTarget(e.target)) return;
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
         e.preventDefault();
       }
@@ -206,15 +247,17 @@ export const SnakeGameApp: React.FC = () => {
     const render = (time: number) => {
       animId = requestAnimationFrame(render);
 
-      const cellSize = canvas.width / GRID_SIZE;
+      const cellSize = CANVAS_SIZE / GRID_SIZE;
 
       // 1. GAME TICK LOGIC (deterministic speed based on level)
-      if (isPlaying && !isPaused && !isGameOver) {
-        const tickInterval = Math.max(55, INITIAL_SPEED - (level - 1) * 8);
+      if (isPlaying && !isPaused && !isGameOver && !deadRef.current) {
+        const tickInterval = Math.max(55, INITIAL_SPEED - (levelRef.current - 1) * 8);
 
         if (time - lastTickTimeRef.current >= tickInterval) {
           lastTickTimeRef.current = time;
 
+          const queued = dirQueueRef.current.shift();
+          if (queued) nextDirRef.current = queued;
           dirRef.current = nextDirRef.current;
           const head = { ...snakeRef.current[0] };
 
@@ -227,14 +270,20 @@ export const SnakeGameApp: React.FC = () => {
 
           // Check Wall Collision
           if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
+            deadRef.current = true;
             audio.playDrain();
             setIsGameOver(true);
             setAnnouncement('CRITICAL COLLISION: WALL IMPACT');
             return;
           }
 
-          // Check Self Collision
-          if (snakeRef.current.some(seg => seg.x === head.x && seg.y === head.y)) {
+          // Check Self Collision (the tail cell is vacated this tick unless we eat)
+          const eats =
+            (head.x === foodRef.current.x && head.y === foodRef.current.y) ||
+            (!!bonusFoodRef.current && head.x === bonusFoodRef.current.x && head.y === bonusFoodRef.current.y);
+          const body = eats ? snakeRef.current : snakeRef.current.slice(0, -1);
+          if (body.some(seg => seg.x === head.x && seg.y === head.y)) {
+            deadRef.current = true;
             audio.playDrain();
             setIsGameOver(true);
             setAnnouncement('CRITICAL COLLISION: SELF IMPACT');
@@ -254,45 +303,23 @@ export const SnakeGameApp: React.FC = () => {
 
             let curCombo = 1;
             if (timeDiff < 2500) {
-              curCombo = Math.min(5, combo + 1);
-              setCombo(curCombo);
+              curCombo = Math.min(5, comboRef.current + 1);
               if (curCombo > 2) audio.playJackpot();
-            } else {
-              setCombo(1);
             }
+            comboRef.current = curCombo;
+            setCombo(curCombo);
 
-            const pts = 100 * curCombo;
-            setScore(s => {
-              const newScore = s + pts;
-              setHighScore(h => {
-                if (newScore > h) {
-                  localStorage.setItem('yuzuos_snake_highscore', newScore.toString());
-                  return newScore;
-                }
-                return h;
-              });
-              // Level up every 500 pts
-              const nextLevel = Math.floor(newScore / 500) + 1;
-              if (nextLevel > level) {
-                setLevel(nextLevel);
-                audio.playBumper();
-                setAnnouncement(`LEVEL UP! ACCELERATION: LVL ${nextLevel}`);
-              }
-              return newScore;
-            });
+            addPoints(100 * curCombo);
 
+            snakeRef.current = newSnake; // so new food never spawns under the head
             spawnFood();
           } else if (bonusFoodRef.current && head.x === bonusFoodRef.current.x && head.y === bonusFoodRef.current.y) {
             // Check Bonus Gold Food
             audio.playJackpot();
             addParticles(head.x, head.y, 20, '#fbbf24');
-            setScore(s => {
-              const newScore = s + 500;
-              setHighScore(h => Math.max(h, newScore));
-              return newScore;
-            });
             bonusFoodRef.current = null;
             setAnnouncement('SUPER BONUS! +500 PTS');
+            addPoints(500);
           } else {
             // Normal move: remove tail
             newSnake.pop();
@@ -311,39 +338,39 @@ export const SnakeGameApp: React.FC = () => {
       }
 
       // 2. CANVAS RENDERING
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-      // Deep Cyber Obsidian Background
-      const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      bgGrad.addColorStop(0, '#060a12');
-      bgGrad.addColorStop(0.5, '#0a101f');
-      bgGrad.addColorStop(1, '#05070f');
+      // Deep obsidian background with soft center glow
+      const bgGrad = ctx.createRadialGradient(
+        CANVAS_SIZE / 2, CANVAS_SIZE / 2, 20,
+        CANVAS_SIZE / 2, CANVAS_SIZE / 2, CANVAS_SIZE * 0.75
+      );
+      bgGrad.addColorStop(0, '#0d1b2e');
+      bgGrad.addColorStop(1, '#04070d');
       ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-      // Cyber Grid Lines
-      ctx.strokeStyle = 'rgba(6, 182, 212, 0.08)';
-      ctx.lineWidth = 1;
-      for (let i = 0; i <= GRID_SIZE; i++) {
-        const pos = i * cellSize;
-        ctx.beginPath();
-        ctx.moveTo(pos, 0);
-        ctx.lineTo(pos, canvas.height);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(0, pos);
-        ctx.lineTo(canvas.width, pos);
-        ctx.stroke();
+      // Subtle checkerboard tiles instead of harsh grid lines
+      for (let gx = 0; gx < GRID_SIZE; gx++) {
+        for (let gy = 0; gy < GRID_SIZE; gy++) {
+          if ((gx + gy) % 2 === 0) {
+            ctx.fillStyle = 'rgba(103, 232, 249, 0.035)';
+            ctx.fillRect(gx * cellSize, gy * cellSize, cellSize, cellSize);
+          }
+        }
       }
 
-      // Outer Cyber Arena Border
-      ctx.strokeStyle = '#06b6d4';
+      // Inner arena frame (double line with glow)
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.9)';
       ctx.lineWidth = 2;
       ctx.shadowColor = '#06b6d4';
-      ctx.shadowBlur = 10;
-      ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
+      ctx.shadowBlur = 12;
+      ctx.strokeRect(1, 1, CANVAS_SIZE - 2, CANVAS_SIZE - 2);
       ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(165, 243, 252, 0.18)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(5.5, 5.5, CANVAS_SIZE - 11, CANVAS_SIZE - 11);
 
       // Render Food (Neon Magenta Energy Core)
       const food = foodRef.current;
@@ -400,63 +427,71 @@ export const SnakeGameApp: React.FC = () => {
         ctx.restore();
       }
 
-      // Render Snake Body & Head
+      // Render Snake: smooth connected body (tail tapers), glossy head with eyes
       const snake = snakeRef.current;
-      snake.forEach((seg, idx) => {
-        const sx = seg.x * cellSize + 1.5;
-        const sy = seg.y * cellSize + 1.5;
-        const sSize = cellSize - 3;
+      const half = cellSize / 2;
+      for (let idx = snake.length - 1; idx >= 0; idx--) {
+        const seg = snake[idx];
+        const cx = (seg.x + 0.5) * cellSize;
+        const cy = (seg.y + 0.5) * cellSize;
         const isHead = idx === 0;
+        const taper = isHead ? 1 : 1 - (idx / Math.max(snake.length, 8)) * 0.3;
+        const rad = (half - 1.5) * taper;
+        const fraction = idx / Math.max(snake.length, 1);
 
         ctx.save();
+        ctx.shadowColor = isHead ? '#22d3ee' : '#10b981';
+        ctx.shadowBlur = isHead ? 16 : 6;
+
+        // Bridge to the next segment so the body reads as one continuous creature
+        if (idx < snake.length - 1) {
+          const nx = (snake[idx + 1].x + 0.5) * cellSize;
+          const ny = (snake[idx + 1].y + 0.5) * cellSize;
+          ctx.strokeStyle = `rgb(${Math.round(8 + fraction * 8)}, ${Math.round(170 - fraction * 40)}, ${Math.round(205 - fraction * 75)})`;
+          ctx.lineWidth = rad * 2;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(nx, ny);
+          ctx.stroke();
+        }
+
+        const grad = ctx.createRadialGradient(cx - rad * 0.35, cy - rad * 0.4, 1, cx, cy, rad);
         if (isHead) {
-          // Neon Cyan Glowing Head
-          ctx.shadowColor = '#06b6d4';
-          ctx.shadowBlur = 16;
-          const headGrad = ctx.createLinearGradient(sx, sy, sx + sSize, sy + sSize);
-          headGrad.addColorStop(0, '#67e8f9');
-          headGrad.addColorStop(0.5, '#06b6d4');
-          headGrad.addColorStop(1, '#0891b2');
-          ctx.fillStyle = headGrad;
-          ctx.beginPath();
-          ctx.roundRect(sx, sy, sSize, sSize, 6);
-          ctx.fill();
-
-          // Snake Eyes
-          ctx.shadowBlur = 0;
-          ctx.fillStyle = '#ffffff';
-          let eye1 = { x: sx + 4, y: sy + 4 };
-          let eye2 = { x: sx + sSize - 4, y: sy + 4 };
-          if (dirRef.current === 'DOWN') {
-            eye1 = { x: sx + 4, y: sy + sSize - 4 };
-            eye2 = { x: sx + sSize - 4, y: sy + sSize - 4 };
-          } else if (dirRef.current === 'LEFT') {
-            eye1 = { x: sx + 4, y: sy + 4 };
-            eye2 = { x: sx + 4, y: sy + sSize - 4 };
-          } else if (dirRef.current === 'RIGHT') {
-            eye1 = { x: sx + sSize - 4, y: sy + 4 };
-            eye2 = { x: sx + sSize - 4, y: sy + sSize - 4 };
-          }
-          ctx.beginPath();
-          ctx.arc(eye1.x, eye1.y, 2, 0, Math.PI * 2);
-          ctx.arc(eye2.x, eye2.y, 2, 0, Math.PI * 2);
-          ctx.fill();
+          grad.addColorStop(0, '#cffafe');
+          grad.addColorStop(0.45, '#22d3ee');
+          grad.addColorStop(1, '#0e7490');
         } else {
-          // Gradient Body Segments (Cyan to Emerald)
-          const fraction = idx / snake.length;
-          const r = Math.round(6 + fraction * 10);
-          const g = Math.round(182 - fraction * 40);
-          const bVal = Math.round(212 - fraction * 80);
+          grad.addColorStop(0, `rgb(${Math.round(110 - fraction * 40)}, ${Math.round(235 - fraction * 50)}, ${Math.round(230 - fraction * 90)})`);
+          grad.addColorStop(1, `rgb(${Math.round(8 + fraction * 8)}, ${Math.round(150 - fraction * 40)}, ${Math.round(185 - fraction * 75)})`);
+        }
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+        ctx.fill();
 
-          ctx.fillStyle = `rgb(${r}, ${g}, ${bVal})`;
-          ctx.shadowColor = '#10b981';
-          ctx.shadowBlur = 6;
-          ctx.beginPath();
-          ctx.roundRect(sx + 1, sy + 1, sSize - 2, sSize - 2, 4);
-          ctx.fill();
+        if (isHead) {
+          ctx.shadowBlur = 0;
+          const d = dirRef.current;
+          const fx = d === 'LEFT' ? -1 : d === 'RIGHT' ? 1 : 0;
+          const fy = d === 'UP' ? -1 : d === 'DOWN' ? 1 : 0;
+          const px = -fy;
+          const py = fx;
+          [-1, 1].forEach(side => {
+            const ex = cx + fx * rad * 0.35 + px * side * rad * 0.5;
+            const ey = cy + fy * rad * 0.35 + py * side * rad * 0.5;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(ex, ey, 2.6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(ex + fx * 0.9, ey + fy * 0.9, 1.3, 0, Math.PI * 2);
+            ctx.fill();
+          });
         }
         ctx.restore();
-      });
+      }
 
       // Update & Render Particles
       const particles = particlesRef.current;
@@ -487,21 +522,23 @@ export const SnakeGameApp: React.FC = () => {
 
     animId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animId);
-  }, [isPlaying, isPaused, isGameOver, level, combo, spawnFood]);
+  }, [isPlaying, isPaused, isGameOver, spawnFood, addPoints]);
 
   return (
-    <div className="h-full w-full bg-[#070b14] flex flex-col items-center justify-between p-2 select-none font-mono text-cyan-300">
+    <div className="h-full w-full flex flex-col items-center justify-between p-3 select-none font-mono text-cyan-300" style={{ background: 'radial-gradient(ellipse at 50% 0%, #0f2336 0%, #070b14 60%, #04060c 100%)' }}>
       {/* Top Cyber HUD Status */}
-      <div className="w-full max-w-[420px] bg-slate-900/80 border border-cyan-500/30 rounded-xl p-2.5 backdrop-blur-md shadow-[0_4px_20px_rgba(6,182,212,0.15)] flex items-center justify-between shrink-0">
+      <div className="w-full max-w-[420px] bg-gradient-to-b from-slate-800/70 to-slate-900/80 border border-cyan-400/25 rounded-2xl px-4 py-2.5 backdrop-blur-md shadow-[0_8px_24px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.08)] gap-3 flex items-center justify-between shrink-0">
         <div className="flex flex-col">
           <span className="text-[10px] text-cyan-400/70 uppercase tracking-widest">Score</span>
-          <span className="text-xl font-black text-white tracking-wider">{score.toLocaleString()}</span>
+          <span className="text-2xl font-black text-white tracking-wider tabular-nums leading-none">{score.toLocaleString()}</span>
         </div>
 
         {/* Combo Multiplier indicator */}
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-950/60 border border-cyan-500/40 text-xs">
           <Zap size={14} className={combo > 1 ? 'text-amber-400 animate-bounce' : 'text-cyan-400'} />
           <span className="font-bold text-white">{combo}x COMBO</span>
+          <span className="text-cyan-400/50">|</span>
+          <span className="font-bold text-cyan-200">LV {level}</span>
         </div>
 
         <div className="flex flex-col text-right">
@@ -525,18 +562,18 @@ export const SnakeGameApp: React.FC = () => {
       <div className="relative flex-1 min-h-0 w-full flex items-center justify-center my-1">
         <canvas
           ref={canvasRef}
-          width={400}
-          height={400}
-          className="rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.8)] aspect-square max-h-[calc(100vh-270px)] sm:max-h-[380px] w-auto h-auto object-contain border border-cyan-500/40"
+          width={CANVAS_SIZE * DPR}
+          height={CANVAS_SIZE * DPR}
+          className="max-w-[min(400px,100%)] rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.85),0_0_0_1px_rgba(103,232,249,0.25),0_0_30px_rgba(6,182,212,0.15)] aspect-square max-h-[calc(100vh-270px)] sm:max-h-[380px] w-auto h-auto object-contain"
         />
 
         {/* Overlay: Start / Ready Screen */}
         {!isPlaying && !isGameOver && (
-          <div className="absolute inset-0 bg-black/75 backdrop-blur-xs rounded-xl flex flex-col items-center justify-center p-4 z-20">
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center p-4 z-20">
             <div className="w-14 h-14 rounded-2xl bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center text-cyan-300 shadow-[0_0_20px_#06b6d4] mb-3 animate-pulse">
               <Zap size={28} />
             </div>
-            <h2 className="text-2xl font-black text-white tracking-widest uppercase mb-1 drop-shadow-[0_0_10px_#06b6d4]">
+            <h2 className="text-3xl font-black text-white tracking-[0.25em] uppercase mb-1 drop-shadow-[0_0_14px_rgba(6,182,212,0.8)]">
               CYBER SNAKE
             </h2>
             <p className="text-xs text-cyan-300/80 text-center mb-4 max-w-[240px]">
@@ -554,7 +591,7 @@ export const SnakeGameApp: React.FC = () => {
 
         {/* Overlay: Game Over Screen */}
         {isGameOver && (
-          <div className="absolute inset-0 bg-black/85 backdrop-blur-xs rounded-xl flex flex-col items-center justify-center p-4 z-30 animate-in zoom-in-95">
+          <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center p-4 z-30 animate-in zoom-in-95">
             <div className="w-12 h-12 rounded-full bg-rose-500/20 border border-rose-500 flex items-center justify-center text-rose-400 shadow-[0_0_20px_#f43f5e] mb-2">
               <Sparkles size={24} />
             </div>
@@ -573,7 +610,7 @@ export const SnakeGameApp: React.FC = () => {
 
         {/* Overlay: Pause Screen */}
         {isPaused && (
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-xs rounded-xl flex flex-col items-center justify-center z-20">
+          <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center z-20">
             <h3 className="text-2xl font-black text-amber-300 tracking-widest uppercase mb-3">PAUSED</h3>
             <button
               onClick={() => setIsPaused(false)}
@@ -609,7 +646,7 @@ export const SnakeGameApp: React.FC = () => {
           <div />
           <button
             onPointerDown={() => changeDirection('UP')}
-            className="w-full h-8 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 active:bg-cyan-500 active:text-black flex items-center justify-center text-cyan-300 cursor-pointer transition-colors shadow"
+            className="w-full h-8 rounded-lg bg-gradient-to-b from-slate-700/80 to-cyan-950/90 hover:from-slate-600 hover:to-cyan-900 border border-cyan-400/30 active:bg-cyan-500 active:text-black flex items-center justify-center text-cyan-300 cursor-pointer transition-colors shadow"
             title="Up"
           >
             <ArrowUp size={16} />
@@ -618,7 +655,7 @@ export const SnakeGameApp: React.FC = () => {
 
           <button
             onPointerDown={() => changeDirection('LEFT')}
-            className="w-full h-8 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 active:bg-cyan-500 active:text-black flex items-center justify-center text-cyan-300 cursor-pointer transition-colors shadow"
+            className="w-full h-8 rounded-lg bg-gradient-to-b from-slate-700/80 to-cyan-950/90 hover:from-slate-600 hover:to-cyan-900 border border-cyan-400/30 active:bg-cyan-500 active:text-black flex items-center justify-center text-cyan-300 cursor-pointer transition-colors shadow"
             title="Left"
           >
             <ArrowLeft size={16} />
@@ -628,7 +665,7 @@ export const SnakeGameApp: React.FC = () => {
           </div>
           <button
             onPointerDown={() => changeDirection('RIGHT')}
-            className="w-full h-8 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 active:bg-cyan-500 active:text-black flex items-center justify-center text-cyan-300 cursor-pointer transition-colors shadow"
+            className="w-full h-8 rounded-lg bg-gradient-to-b from-slate-700/80 to-cyan-950/90 hover:from-slate-600 hover:to-cyan-900 border border-cyan-400/30 active:bg-cyan-500 active:text-black flex items-center justify-center text-cyan-300 cursor-pointer transition-colors shadow"
             title="Right"
           >
             <ArrowRight size={16} />
@@ -637,7 +674,7 @@ export const SnakeGameApp: React.FC = () => {
           <div />
           <button
             onPointerDown={() => changeDirection('DOWN')}
-            className="w-full h-8 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 active:bg-cyan-500 active:text-black flex items-center justify-center text-cyan-300 cursor-pointer transition-colors shadow"
+            className="w-full h-8 rounded-lg bg-gradient-to-b from-slate-700/80 to-cyan-950/90 hover:from-slate-600 hover:to-cyan-900 border border-cyan-400/30 active:bg-cyan-500 active:text-black flex items-center justify-center text-cyan-300 cursor-pointer transition-colors shadow"
             title="Down"
           >
             <ArrowDown size={16} />

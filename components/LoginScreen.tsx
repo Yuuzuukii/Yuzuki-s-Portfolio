@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, Lock, Sparkles, Clock, Undo2 } from 'lucide-react';
+import { ArrowRight, Rewind, Rocket } from 'lucide-react';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { OSTheme } from '../types';
 import { audio } from '../services/audioService';
@@ -42,8 +42,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, osTheme, onTo
     }, 800);
   };
 
+  // onToggleTheme already plays the time-warp chime
   const handleTimeTravel = () => {
-    audio.playTimeWarp();
     onToggleTheme();
   };
 
@@ -65,21 +65,99 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, osTheme, onTo
     >
       {/* Background Overlay */}
       {isFrutiger ? (
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Sun flare & daylight halo */}
-          <div 
-            className="absolute -top-32 left-1/3 w-[500px] h-[500px] rounded-full"
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {/* Sun rays */}
+          <div
+            className="absolute left-1/3 w-[140vmax] h-[140vmax] -translate-x-1/2 opacity-40 animate-spin"
             style={{
-              background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(56,189,248,0.2) 60%, transparent 80%)',
-              filter: 'blur(30px)',
+              top: 'calc(120px - 70vmax)', // centre the rays on the sun
+              background: 'repeating-conic-gradient(from 0deg, rgba(255,255,255,0.35) 0deg 6deg, transparent 6deg 18deg)',
+              maskImage: 'radial-gradient(circle, black 0%, transparent 45%)',
+              WebkitMaskImage: 'radial-gradient(circle, black 0%, transparent 45%)',
+              animationDuration: '120s',
             }}
           />
-          {/* Green Hill Silhouette at bottom */}
-          <div 
+          {/* Sun flare & daylight halo */}
+          <div
+            className="absolute -top-32 left-1/3 w-[500px] h-[500px] -translate-x-1/2 rounded-full"
+            style={{
+              background: 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.4) 25%, rgba(56,189,248,0.15) 55%, transparent 75%)',
+              filter: 'blur(20px)',
+            }}
+          />
+          {/* Lens flare dots */}
+          <div className="absolute top-[30%] left-[42%] w-10 h-10 rounded-full bg-white/25 blur-[2px]" />
+          <div className="absolute top-[42%] left-[48%] w-5 h-5 rounded-full bg-cyan-100/40" />
+          <div className="absolute top-[52%] left-[53%] w-16 h-16 rounded-full border-2 border-white/20" />
+
+          {/* Soft clouds */}
+          {[
+            { top: '10%', left: '6%', w: 260, o: 0.85 },
+            { top: '18%', left: '68%', w: 320, o: 0.75 },
+            { top: '34%', left: '-4%', w: 200, o: 0.55 },
+            { top: '28%', left: '82%', w: 180, o: 0.6 },
+          ].map((c, i) => (
+            <div key={i} className="absolute" style={{ top: c.top, left: c.left, width: c.w, height: c.w * 0.38, opacity: c.o }}>
+              <div className="absolute bottom-0 inset-x-0 h-1/2 rounded-full bg-white blur-[6px]" />
+              <div className="absolute bottom-[20%] left-[15%] w-[45%] h-[85%] rounded-full bg-white blur-[6px]" />
+              <div className="absolute bottom-[15%] left-[45%] w-[38%] h-[70%] rounded-full bg-white blur-[6px]" />
+            </div>
+          ))}
+
+          {/* Aero light swooshes */}
+          <svg className="absolute inset-x-0 bottom-16 w-full h-[55%]" viewBox="0 0 1440 500" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="loginSwooshA" x1="0" x2="1">
+                <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
+                <stop offset="45%" stopColor="#ffffff" stopOpacity="0.75" />
+                <stop offset="100%" stopColor="#a5f3fc" stopOpacity="0" />
+              </linearGradient>
+              <linearGradient id="loginSwooshB" x1="0" x2="1">
+                <stop offset="0%" stopColor="#bbf7d0" stopOpacity="0" />
+                <stop offset="55%" stopColor="#ecfeff" stopOpacity="0.55" />
+                <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d="M0,380 C360,220 760,460 1440,180 L1440,220 C800,500 380,280 0,420 Z" fill="url(#loginSwooshA)" />
+            <path d="M0,300 C420,420 900,160 1440,320 L1440,340 C900,200 420,450 0,318 Z" fill="url(#loginSwooshB)" />
+            <path d="M0,440 C500,330 980,470 1440,390" fill="none" stroke="#ffffff" strokeOpacity="0.6" strokeWidth="2" />
+          </svg>
+
+          {/* Rising glossy bubbles (decorative only) */}
+          {[
+            { left: '8%', size: 34, dur: '18s', delay: '0s' },
+            { left: '22%', size: 20, dur: '14s', delay: '4s' },
+            { left: '37%', size: 46, dur: '22s', delay: '8s' },
+            { left: '63%', size: 26, dur: '16s', delay: '2s' },
+            { left: '78%', size: 40, dur: '20s', delay: '6s' },
+            { left: '91%', size: 22, dur: '15s', delay: '10s' },
+          ].map((b, i) => (
+            <div
+              key={i}
+              className="absolute top-0"
+              style={{ left: b.left, width: b.size, height: b.size, animation: `float-bubble ${b.dur} linear infinite`, animationDelay: b.delay }}
+            >
+              <div
+                className="w-full h-full rounded-full"
+                style={{
+                  background: 'radial-gradient(circle at 30% 28%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.3) 25%, rgba(56,189,248,0.2) 60%, rgba(2,132,199,0.45) 100%)',
+                  border: '1px solid rgba(255,255,255,0.85)',
+                  boxShadow: 'inset 0 1px 3px rgba(255,255,255,0.9), 0 2px 8px rgba(2,132,199,0.3)',
+                }}
+              />
+            </div>
+          ))}
+
+          {/* Layered hills with glossy rim light */}
+          <div
+            className="absolute -bottom-6 -left-[10%] w-[70%] h-44 rounded-t-[100%]"
+            style={{ background: 'linear-gradient(180deg, #86efac 0%, #22c55e 60%, #15803d 100%)', opacity: 0.8 }}
+          />
+          <div
             className="absolute bottom-0 inset-x-0 h-32 rounded-t-[100%_40%]"
             style={{
               background: 'linear-gradient(180deg, #4ade80 0%, #16a34a 100%)',
-              opacity: 0.85,
+              boxShadow: 'inset 0 6px 10px rgba(255,255,255,0.55)',
             }}
           />
         </div>
@@ -120,7 +198,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, osTheme, onTo
               </h1>
               {isFrutiger && (
                 <span className="text-xs font-semibold text-sky-800 bg-white/70 px-2 py-0.5 rounded-full border border-sky-300 shadow-xs inline-block mt-1">
-                  YuzuOS 2000s Aero
+                  YuzuOS Aero Edition
                 </span>
               )}
             </div>
@@ -169,29 +247,31 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, osTheme, onTo
               {isMobile ? "Tap to unlock" : "Click arrow or press Enter to login"}
             </p>
 
-            {/* Time Travel Button: "昔に戻る" in modern mode, "未来へ進む" in Frutiger mode */}
+            {/* Time Travel Button: only offered here on the login screen */}
             <div className="w-full pt-2">
               <button
                 type="button"
                 onClick={handleTimeTravel}
-                className={`w-full py-2.5 px-4 rounded-full font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all duration-300 ${
+                className={`group w-full py-2.5 px-4 rounded-full flex items-center justify-center gap-3 cursor-pointer transition-all duration-300 ${
                   isFrutiger
                     ? 'aero-button text-sky-950 shadow-[0_4px_14px_rgba(2,132,199,0.3)] hover:scale-105'
                     : 'bg-gradient-to-r from-cyan-500/80 via-teal-400/80 to-blue-500/80 hover:from-cyan-400 hover:to-blue-400 text-slate-900 border border-white/40 shadow-[0_0_20px_rgba(56,189,248,0.4)] backdrop-blur-md hover:scale-105'
                 }`}
-                title={isFrutiger ? "現在のモダンOSデザインに戻る" : "2000年代のFrutiger Aeroデザインを体験する"}
+                title={isFrutiger ? 'Jump forward to the sleek modern desktop' : 'Travel back to the glossy Frutiger Aero era'}
               >
                 {isFrutiger ? (
-                  <>
-                    <Sparkles size={16} className="text-amber-500" />
-                    <span>未来へ進む (Modern OS)</span>
-                  </>
+                  <Rocket size={18} className="text-sky-700 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                 ) : (
-                  <>
-                    <Clock size={16} className="text-slate-900 animate-pulse" />
-                    <span>昔に戻る (2000s Frutiger Aero)</span>
-                  </>
+                  <Rewind size={18} className="text-slate-900 transition-transform group-hover:-translate-x-0.5" />
                 )}
+                <span className="flex flex-col items-start leading-tight">
+                  <span className="text-sm font-extrabold tracking-wide">
+                    {isFrutiger ? 'Warp to the Future' : 'Rewind Time'}
+                  </span>
+                  <span className={`text-[10px] font-semibold ${isFrutiger ? 'text-sky-800/80' : 'text-slate-900/70'}`}>
+                    {isFrutiger ? 'Back to the modern OS' : 'Step into the glossy Aero era'}
+                  </span>
+                </span>
               </button>
             </div>
             </form>

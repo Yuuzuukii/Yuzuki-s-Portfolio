@@ -11,7 +11,7 @@ export const ClippyAssistant: React.FC = () => {
     "Need to see full-stack projects? Click the Manila Folder icon to check out ShigaChat with FastAPI, RAG, and MySQL!",
     "Looking for AI Chat? Click the MSN jelly buddies icon to talk with YuzuBot AI directly!",
     "Want to test his skills? Open the holographic CD/DVD disc to view the technical proficiency charts!",
-    "Want to return to modern design? Click the '未来へ進む' button on the taskbar or login screen anytime!"
+    "Want to switch eras? Restart from the Start menu and hit 'Warp to the Future' on the login screen!"
   ];
 
   const handleNextTip = () => {
@@ -32,7 +32,7 @@ export const ClippyAssistant: React.FC = () => {
           <div className="flex items-center justify-between pb-1 mb-1 border-b border-amber-300/80 font-bold text-[11px] text-amber-900">
             <span className="flex items-center gap-1">
               <MessageSquare size={12} />
-              <span>Clippy's 2000s Tip</span>
+              <span>Clippy's Tip</span>
             </span>
             <button
               onClick={() => { audio.playClick(); setIsOpen(false); }}
