@@ -1,3 +1,4 @@
+@import "@frutiger.js/core/styles.css";
 @import "tailwindcss";
 
 * {
@@ -12,9 +13,32 @@ html, body, #root {
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   overflow: hidden;
   user-select: none;
+}
+
+/* 2000s Windows Vista / Windows 7 / XP Typography Classes */
+.font-frutiger-ui {
+  font-family: "Segoe UI", "Meiryo", "メイリオ", Tahoma, "MS PGothic", "ＭＳ Ｐゴシック", Verdana, sans-serif;
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
+  letter-spacing: -0.01em;
+}
+
+.font-vista-dialog {
+  font-family: Tahoma, "Meiryo", "メイリオ", "MS PGothic", "ＭＳ Ｐゴシック", Arial, sans-serif;
+  -webkit-font-smoothing: subpixel-antialiased;
+}
+
+.font-retro-cmd {
+  font-family: "Lucida Console", Consolas, "Courier New", "MS Gothic", monospace;
+  -webkit-font-smoothing: none;
+}
+
+.font-led-counter {
+  font-family: 'Share Tech Mono', 'Courier New', monospace;
+  letter-spacing: 0.1em;
 }
 
 .font-mono {
@@ -39,3 +63,200 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.4);
 }
+
+/* Frutiger Aero Glass & Skeuomorphic Utility Styles */
+.aero-glass-window {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.65) 0%,
+    rgba(215, 237, 255, 0.45) 15%,
+    rgba(164, 214, 255, 0.25) 50%,
+    rgba(200, 235, 255, 0.5) 100%
+  );
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 15px 35px rgba(2, 60, 110, 0.25),
+    0 2px 8px rgba(0, 0, 0, 0.1),
+    inset 0 1px 2px rgba(255, 255, 255, 0.95),
+    inset 0 -1px 2px rgba(2, 132, 199, 0.3);
+}
+
+.aero-titlebar {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.8) 0%,
+    rgba(224, 242, 254, 0.6) 40%,
+    rgba(125, 211, 252, 0.4) 50%,
+    rgba(186, 230, 253, 0.7) 100%
+  );
+  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.aero-taskbar {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(186, 230, 253, 0.4) 20%,
+    rgba(56, 189, 248, 0.25) 50%,
+    rgba(14, 116, 144, 0.5) 100%
+  );
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border-top: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 -4px 20px rgba(2, 132, 199, 0.2),
+    inset 0 1px 1px rgba(255, 255, 255, 0.9);
+}
+
+.aero-button {
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #e0f2fe 48%,
+    #7dd3fc 52%,
+    #38bdf8 100%
+  );
+  border: 1px solid #0284c7;
+  box-shadow:
+    inset 0 1px 2px #ffffff,
+    inset 0 -1px 1px #0369a1,
+    0 2px 6px rgba(2, 132, 199, 0.3);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+  transition: all 0.15s ease-out;
+}
+
+.aero-button:hover {
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #bae6fd 48%,
+    #38bdf8 52%,
+    #0284c7 100%
+  );
+  box-shadow:
+    inset 0 1px 3px #ffffff,
+    inset 0 -1px 2px #075985,
+    0 0 14px rgba(56, 189, 248, 0.6);
+  transform: translateY(-1px);
+}
+
+.aero-button:active {
+  background: linear-gradient(
+    180deg,
+    #38bdf8 0%,
+    #0284c7 50%,
+    #bae6fd 100%
+  );
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+    0 1px 2px rgba(2, 132, 199, 0.2);
+  transform: translateY(1px);
+}
+
+.aero-button-aqua {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(147, 243, 220, 0.8) 48%,
+    rgba(45, 212, 191, 0.9) 52%,
+    rgba(13, 148, 136, 0.95) 100%
+  );
+  border: 1px solid #0d9488;
+  box-shadow:
+    inset 0 1px 2px #ffffff,
+    inset 0 -1px 1px #042f2e,
+    0 3px 10px rgba(13, 148, 136, 0.35);
+  color: #042f2e;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.aero-button-aqua:hover {
+  filter: brightness(1.1);
+  box-shadow:
+    0 0 16px rgba(45, 212, 191, 0.7),
+    inset 0 1px 2px #ffffff;
+}
+
+.aero-jelly-icon {
+  background: radial-gradient(
+    circle at 35% 30%,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(255, 255, 255, 0.4) 25%,
+    transparent 65%
+  ),
+  linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(0, 0, 0, 0.1));
+}
+
+@keyframes float-bubble {
+  0% {
+    transform: translateY(105vh) translateX(0) scale(0.6);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.75;
+  }
+  85% {
+    opacity: 0.75;
+  }
+  100% {
+    transform: translateY(-10vh) translateX(30px) scale(1.1);
+    opacity: 0;
+  }
+}
+
+@keyframes swim-fish {
+  0% {
+    transform: translateX(-120px) translateY(0px) scaleX(1);
+  }
+  48% {
+    transform: translateX(calc(100vw + 120px)) translateY(-25px) scaleX(1);
+  }
+  50% {
+    transform: translateX(calc(100vw + 120px)) translateY(-25px) scaleX(-1);
+  }
+  98% {
+    transform: translateX(-120px) translateY(20px) scaleX(-1);
+  }
+  100% {
+    transform: translateX(-120px) translateY(0px) scaleX(1);
+  }
+}
+
+@keyframes swim-fish-reverse {
+  0% {
+    transform: translateX(calc(100vw + 120px)) translateY(10px) scaleX(-1);
+  }
+  48% {
+    transform: translateX(-120px) translateY(-15px) scaleX(-1);
+  }
+  50% {
+    transform: translateX(-120px) translateY(-15px) scaleX(1);
+  }
+  98% {
+    transform: translateX(calc(100vw + 120px)) translateY(5px) scaleX(1);
+  }
+  100% {
+    transform: translateX(calc(100vw + 120px)) translateY(10px) scaleX(-1);
+  }
+}
+
+@keyframes glass-sheen {
+  0% {
+    transform: translateX(-100%) rotate(25deg);
+  }
+  100% {
+    transform: translateX(200%) rotate(25deg);
+  }
+}
+
+.animate-swim {
+  animation: swim-fish 32s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+.animate-swim-delayed {
+  animation: swim-fish-reverse 42s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite 8s;
+}
+

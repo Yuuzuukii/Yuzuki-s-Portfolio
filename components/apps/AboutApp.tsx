@@ -8,7 +8,7 @@ export const AboutApp: React.FC = () => {
         <div className="w-full md:w-1/3 flex flex-col items-center text-center space-y-4">
           <div className="w-32 h-32 rounded-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 p-1 shadow-lg">
              <img 
-               src="/Yuzuki-s-Portfolio/profile.jpg" 
+               src="/profile.jpg" 
                alt="Yuzuki Masuo"
                className="w-full h-full rounded-full object-cover border-4 border-slate-900"
              />

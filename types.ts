@@ -6,6 +6,8 @@ export enum SystemState {
   DESKTOP = "DESKTOP",
 }
 
+export type OSTheme = 'modern' | 'frutiger';
+
 export interface WindowState {
   id: string;
   title: string;
@@ -19,7 +21,7 @@ export interface WindowState {
   size: { width: number; height: number };
 }
 
-export type AppId = 'about' | 'projects' | 'skills' | 'terminal' | 'ai_chat' | 'contact' | 'snake';
+export type AppId = 'about' | 'projects' | 'skills' | 'terminal' | 'ai_chat' | 'contact' | 'snake' | 'pinball';
 
 export interface AppConfig {
   id: AppId;

@@ -2,13 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { AppConfig } from '../types';
 import { Battery, Wifi, Signal, ChevronLeft, Circle, Square, Sun } from 'lucide-react';
 
+import { OSTheme } from '../types';
+import { audio } from '../services/audioService';
+import { Sparkles, Clock } from 'lucide-react';
+import { FRUTIGER_COMPONENTS } from './frutiger/FrutigerWindowFrameV2';
+
 interface MobileOSProps {
   apps: AppConfig[];
   appComponents: Record<string, React.FC>;
   onLogout: () => void;
+  osTheme: OSTheme;
+  onToggleTheme: () => void;
 }
 
-export const MobileOS: React.FC<MobileOSProps> = ({ apps, appComponents, onLogout }) => {
+export const MobileOS: React.FC<MobileOSProps> = ({ 
+  apps, 
+  appComponents, 
+  onLogout,
+  osTheme,
+  onToggleTheme
+}) => {
   const [activeAppId, setActiveAppId] = useState<string | null>(null);
   const [time, setTime] = useState(new Date());
   const [isClosing, setIsClosing] = useState(false);
@@ -37,12 +50,17 @@ export const MobileOS: React.FC<MobileOSProps> = ({ apps, appComponents, onLogou
     };
   }, [apps]);
 
+  const isFrutiger = osTheme === 'frutiger';
+
   const handleAppClick = (id: string) => {
+    audio.playClick();
+    audio.playWindowOpen();
     setActiveAppId(id);
   };
 
   const handleHome = () => {
     if (activeAppId) {
+      audio.playWindowClose();
       setIsClosing(true);
       setTimeout(() => {
         setActiveAppId(null);
@@ -57,17 +75,21 @@ export const MobileOS: React.FC<MobileOSProps> = ({ apps, appComponents, onLogou
     }
   };
 
-  const ActiveComponent = activeAppId ? appComponents[activeAppId] : null;
+  const ActiveComponent = activeAppId 
+    ? (isFrutiger && FRUTIGER_COMPONENTS[activeAppId] ? FRUTIGER_COMPONENTS[activeAppId] : appComponents[activeAppId])
+    : null;
 
   return (
-    <div className="h-full w-full bg-black relative overflow-hidden font-sans select-none text-white">
-      {/* 美しいグラデーション壁紙 */}
+    <div className={`h-full w-full bg-black relative overflow-hidden select-none text-white ${isFrutiger ? 'font-frutiger-ui' : 'font-sans'}`}>
+      {/* Dynamic Wallpaper */}
       <div 
-        className="absolute inset-0 transition-transform duration-500"
+        className="absolute inset-0 transition-all duration-700"
         style={{ 
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%)",
-            backgroundSize: "400% 400%",
-            animation: activeAppId ? "none" : "gradient 15s ease infinite",
+            background: isFrutiger 
+              ? "linear-gradient(180deg, #0284c7 0%, #38bdf8 30%, #7dd3fc 60%, #bae6fd 85%, #dcfce7 100%)"
+              : "linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%)",
+            backgroundSize: isFrutiger ? "cover" : "400% 400%",
+            animation: (activeAppId || isFrutiger) ? "none" : "gradient 15s ease infinite",
             transform: activeAppId ? 'scale(1.1)' : 'scale(1)',
             filter: activeAppId ? 'brightness(0.8)' : 'brightness(1)'
         }}
@@ -112,9 +134,22 @@ export const MobileOS: React.FC<MobileOSProps> = ({ apps, appComponents, onLogou
                 </div>
             </div>
             {isLandscape && <div className="h-20 w-px bg-white/20 mx-4"></div>}
-            <div className={`inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-sm font-medium border border-white/10 ${isLandscape ? 'h-fit' : ''}`}>
-                <Sun size={18} className="text-yellow-300" />
-                <span>Tokyo 24°C</span>
+            <div className="flex items-center gap-2 mt-2">
+              <div className={`inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full text-sm font-medium border border-white/10 ${isLandscape ? 'h-fit' : ''}`}>
+                  <Sun size={18} className="text-yellow-300" />
+                  <span>Tokyo 24°C</span>
+              </div>
+              <button
+                onClick={() => {
+                  audio.playTimeWarp();
+                  onToggleTheme();
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 transition-all text-white shadow-md active:scale-95"
+                title="時代切り替え"
+              >
+                <Sparkles size={14} className="text-amber-300" />
+                <span>{isFrutiger ? '未来へ進む' : '昔に戻る'}</span>
+              </button>
             </div>
         </div>
 
