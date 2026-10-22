@@ -64,7 +64,7 @@ export const FrutigerTaskbarV2: React.FC<FrutigerTaskbarV2Props> = ({
             }}
           >
             <div className="w-8 h-8 rounded-full border border-white overflow-hidden bg-white">
-              <img src="/profile.jpg" alt="Yuzuki Masuo" className="w-full h-full object-cover" />
+              <img src={`${import.meta.env.BASE_URL}profile.jpg`} alt="Yuzuki Masuo" className="w-full h-full object-cover" />
             </div>
             <div>
               <p className="text-xs font-bold text-white leading-tight">増尾 柚希 (Yuzuki Masuo)</p>

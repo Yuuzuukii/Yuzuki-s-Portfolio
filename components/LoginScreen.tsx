@@ -187,7 +187,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, osTheme, onTo
                 : 'bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500'
             } ${isMobile ? 'w-24 h-24' : 'w-32 h-32'}`}>
                 <img 
-                    src="/profile.jpg" 
+                    src={`${import.meta.env.BASE_URL}profile.jpg`} 
                     alt="Yuzuki Masuo" 
                     className={`w-full h-full rounded-full object-cover ${isFrutiger ? 'border-2 border-white' : 'border-4 border-black/50'}`}
                 />

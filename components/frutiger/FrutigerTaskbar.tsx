@@ -60,7 +60,7 @@ export const FrutigerTaskbar: React.FC<FrutigerTaskbarProps> = ({
           {/* Header user info */}
           <div className="flex items-center gap-3 pb-3 mb-3 border-b border-sky-300/60">
             <div className="w-12 h-12 rounded-xl p-0.5 bg-gradient-to-br from-white via-sky-200 to-sky-400 border border-white shadow-md overflow-hidden">
-              <img src="/profile.jpg" alt="Yuzuki Masuo" className="w-full h-full object-cover rounded-lg" />
+              <img src={`${import.meta.env.BASE_URL}profile.jpg`} alt="Yuzuki Masuo" className="w-full h-full object-cover rounded-lg" />
             </div>
             <div>
               <h2 className="font-bold text-sm text-slate-800">増尾 柚希 (Yuzuki Masuo)</h2>

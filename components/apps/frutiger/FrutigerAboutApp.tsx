@@ -84,7 +84,7 @@ export const FrutigerAboutApp: React.FC = () => {
               {/* Photo in 3D Metallic Glass Photo Frame */}
               <div className="w-24 h-24 shrink-0 p-1 bg-gradient-to-b from-white via-sky-100 to-sky-300 border-2 border-t-white border-l-white border-r-[#075985] border-b-[#075985] shadow-md flex items-center justify-center relative z-10">
                 <img
-                  src="/profile.jpg"
+                  src={`${import.meta.env.BASE_URL}profile.jpg`}
                   alt="Yuzuki Masuo"
                   className="w-full h-full object-cover border border-slate-400"
                 />
